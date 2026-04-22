@@ -1,0 +1,58 @@
+@theme inline {
+  --color-background: #fafaf5;
+  --color-foreground: #2e342d;
+  --color-ink: #26221d;
+  --color-surface: #fafaf5;
+  --color-surface-low: #f3f4ee;
+  --color-surface-workspace: #ecefe7;
+  --color-surface-high: #dee4da;
+  --color-surface-strong: #ffffff;
+  --color-surface-inverse: #0d0f0c;
+  --color-surface-layer: #f1ece3;
+  --color-surface-wash: #f5efe4;
+  --color-foreground-inverse: #f6f7f2;
+  --color-muted: #5a6159;
+  --color-border: rgba(174, 180, 170, 0.15);
+  --color-border-strong: rgba(174, 180, 170, 0.4);
+  --color-accent: #5f5e5e;
+  --color-accent-dim: #535252;
+  --color-accent-strong: #273371;
+  --color-accent-strong-dim: #364280;
+  --color-accent-foreground: #faf7f6;
+
+  --color-accent-soft: rgba(95, 94, 94, 0.08);
+  --color-accent-soft-strong: rgba(95, 94, 94, 0.12);
+  --color-accent-soft-hover: rgba(95, 94, 94, 0.16);
+  --color-foreground-soft: rgba(46, 52, 45, 0.06);
+  --color-background-spotlight: rgba(222, 228, 218, 0.85);
+
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.25rem;
+  --space-6: 1.5rem;
+  --space-7: 2rem;
+  --space-8: 3rem;
+  --space-9: 4.5rem;
+
+  --radius-pill: 999px;
+  --radius-lg: 0.5rem;
+  --radius-xl: 0.75rem;
+
+  --shadow-soft: 0 32px 64px rgba(46, 52, 45, 0.06);
+  --shadow-overlay: 0 32px 64px rgba(46, 52, 45, 0.18);
+  --blur-surface: 12px;
+
+  --font-sans: var(--font-manrope), Arial, Helvetica, sans-serif;
+  --font-serif: var(--font-newsreader), 'Times New Roman', serif;
+  --font-size-label: 0.75rem;
+  --font-size-body: 1rem;
+  --font-size-body-lg: clamp(1.125rem, 1rem + 0.4vw, 1.5rem);
+  --font-size-display: clamp(3.2rem, 8vw, 5.8rem);
+  --font-size-heading: clamp(2rem, 3vw, 3.25rem);
+  --line-height-body: 1.65;
+  --line-height-display: 0.95;
+  --tracking-eyebrow: 0.12em;
+
+  --motion-duration-fast: 160ms;
+}
