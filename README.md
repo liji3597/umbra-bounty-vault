@@ -4,6 +4,21 @@
 
 **Umbra Bounty Vault** is a privacy-first reward workflow for bounties, grants, and contributor rewards. It positions Umbra as product infrastructure for private payout creation, recipient claim, and controlled disclosure rather than as a generic hidden-transfer demo.
 
+<p align="center">
+  <a href="./docs/PLATFORM_SUBMISSION.md"><img src="https://img.shields.io/badge/Submission-Platform%20Copy-111827?style=for-the-badge" alt="Platform submission"></a>
+  <a href="./docs/DEMO_SCRIPT.md"><img src="https://img.shields.io/badge/Demo-Script-0F766E?style=for-the-badge" alt="Demo script"></a>
+  <a href="./docs/P7_VALIDATION_EVIDENCE.md"><img src="https://img.shields.io/badge/Validation-P7%20Evidence-7C3AED?style=for-the-badge" alt="P7 validation evidence"></a>
+  <a href="./docs/P7_RESPONSIVE_EVIDENCE_CHECKLIST.md"><img src="https://img.shields.io/badge/Responsive-Checklist-2563EB?style=for-the-badge" alt="Responsive checklist"></a>
+</p>
+
+<p align="center">
+  <a href="#quick-start">Quick Start</a> ·
+  <a href="#demo-flow">Demo Flow</a> ·
+  <a href="#current-scope">Current Scope</a> ·
+  <a href="#validation-evidence">Validation</a> ·
+  <a href="#docs-navigation">Docs</a>
+</p>
+
 ---
 
 ## At a Glance
@@ -15,6 +30,19 @@
 | What works today | Real wallet adapter entry, typed demo service boundary, and a live devnet anchor in `Create Payout` |
 | Current boundary | `Claim Center`, `Disclosure`, and `Activity` remain demo-backed even when the wallet session is real |
 | Validation status | Typecheck, Vitest, and one Playwright golden-path spec are committed evidence; responsive/a11y/perf artifacts are still partial |
+
+## Table of Contents
+
+- [At a Glance](#at-a-glance)
+- [Why This Project Exists](#why-this-project-exists)
+- [What the Product Demonstrates](#what-the-product-demonstrates)
+- [Quick Start](#quick-start)
+- [Demo Flow](#demo-flow)
+- [Current Scope](#current-scope)
+- [Validation Evidence](#validation-evidence)
+- [Project Structure](#project-structure)
+- [Docs Navigation](#docs-navigation)
+- [Future Work](#future-work)
 
 ## Why This Project Exists
 
@@ -157,17 +185,19 @@ The repository is organized around product surfaces and typed feature boundaries
 - `src/components/` contains shared layout and UI primitives
 - `src/lib/routes.ts` defines the stable page contract
 
-## Repository Docs
+## Docs Navigation
 
-- `docs/SPEC.md` — scope and product/technical specification
-- `docs/DESIGN.md` — design direction and UX framing
-- `docs/TASKS.md` — implementation and closeout task ledger
-- `docs/SUBMISSION.md` — sponsor-fit and submission narrative
-- `docs/PLATFORM_SUBMISSION.md` — concise judge-facing submission copy
-- `docs/DEMO_SCRIPT.md` — presenter-ready demo script
-- `docs/P7_VALIDATION_EVIDENCE.md` — current native Windows validation snapshot
-- `docs/P7_RESPONSIVE_EVIDENCE_CHECKLIST.md` — responsive evidence checklist and capture targets
-- `docs/WSL_CLAUDE_CODE_VALIDATION.md` — WSL validation notes and blockers
+| Document | Purpose |
+| --- | --- |
+| [`docs/SPEC.md`](./docs/SPEC.md) | Scope and product/technical specification |
+| [`docs/DESIGN.md`](./docs/DESIGN.md) | Design direction and UX framing |
+| [`docs/TASKS.md`](./docs/TASKS.md) | Implementation and closeout task ledger |
+| [`docs/SUBMISSION.md`](./docs/SUBMISSION.md) | Sponsor-fit and submission narrative |
+| [`docs/PLATFORM_SUBMISSION.md`](./docs/PLATFORM_SUBMISSION.md) | Concise judge-facing submission copy |
+| [`docs/DEMO_SCRIPT.md`](./docs/DEMO_SCRIPT.md) | Presenter-ready demo script |
+| [`docs/P7_VALIDATION_EVIDENCE.md`](./docs/P7_VALIDATION_EVIDENCE.md) | Current native Windows validation snapshot |
+| [`docs/P7_RESPONSIVE_EVIDENCE_CHECKLIST.md`](./docs/P7_RESPONSIVE_EVIDENCE_CHECKLIST.md) | Responsive evidence checklist and capture targets |
+| [`docs/WSL_CLAUDE_CODE_VALIDATION.md`](./docs/WSL_CLAUDE_CODE_VALIDATION.md) | WSL validation notes and blockers |
 
 ## Future Work
 
