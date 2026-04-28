@@ -81,6 +81,14 @@ describe('ClaimCenterPage', () => {
     expect(screen.queryByRole('button', { name: 'Scan claimable payouts' })).not.toBeInTheDocument();
   });
 
+  it('shows the current demo boundary in disconnected state copy', () => {
+    renderClaimCenterPage({ initialState: { status: 'disconnected' } });
+
+    expect(
+      screen.getByText('Connect a supported wallet to preview the wallet-scoped claim flow within the current demo boundary.'),
+    ).toBeInTheDocument();
+  });
+
   it('shows privacy guidance without exposing provider-specific wallet details', () => {
     renderClaimCenterPage({
       initialState: {
@@ -92,7 +100,7 @@ describe('ClaimCenterPage', () => {
     expect(screen.getByText('Embedded wallet preview')).toBeInTheDocument();
     expect(screen.queryByText('Phantom / provider-debug-details')).not.toBeInTheDocument();
     expect(
-      screen.getByText('Scanning stays scoped to the connected preview wallet and never asks for extra recipient details.'),
+      screen.getByText('Scanning stays scoped to the connected wallet session and never asks for extra recipient details.'),
     ).toBeInTheDocument();
   });
 
@@ -139,9 +147,11 @@ describe('ClaimCenterPage', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Scan claimable payouts' }));
 
     expect(screen.getByRole('button', { name: 'Scanning claimable payouts' })).toBeDisabled();
-    expect(screen.getByText('Scanning connected wallet preview for claimable payouts.')).toBeInTheDocument();
     expect(
-      screen.getByText('Keep this wallet connected while the preview checks for private payouts.'),
+      screen.getByText('Scanning the connected wallet session for claimable payouts within the current demo boundary.'),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText('Keep this wallet connected while the current session checks for private payouts.'),
     ).toBeInTheDocument();
 
     deferred.resolve([
@@ -220,7 +230,7 @@ describe('ClaimCenterPage', () => {
 
     expect(claimPrivatePayout).toHaveBeenCalledWith('payout-1');
     expect(screen.getByRole('button', { name: 'Claiming payout' })).toBeDisabled();
-    expect(screen.getByText('Submitting preview claim.')).toBeInTheDocument();
+    expect(screen.getByText('Submitting claim for the current session.')).toBeInTheDocument();
 
     deferred.resolve({
       payoutId: 'payout-1',
@@ -229,10 +239,10 @@ describe('ClaimCenterPage', () => {
     });
 
     expect(await screen.findByRole('button', { name: 'Claimed' })).toBeDisabled();
-    expect(screen.getByText('Preview claim completed. Reference: claim-tx-1.')).toBeInTheDocument();
+    expect(screen.getByText('Claim completed for the current session. Reference: claim-tx-1.')).toBeInTheDocument();
 
     const nextAction = screen.getByRole('region', { name: 'Next action' });
-    expect(within(nextAction).getByRole('link', { name: 'Review disclosure preview' })).toHaveAttribute(
+    expect(within(nextAction).getByRole('link', { name: 'Review disclosure package' })).toHaveAttribute(
       'href',
       '/app/disclosure',
     );
@@ -268,8 +278,8 @@ describe('ClaimCenterPage', () => {
     expect(claimPrivatePayout).toHaveBeenCalledWith('payout-1');
     expect(await screen.findByRole('button', { name: 'Pending claim' })).toBeDisabled();
     expect(screen.getByText('pending')).toBeInTheDocument();
-    expect(screen.getByText('Preview claim submitted. Reference: claim-tx-1.')).toBeInTheDocument();
-    expect(screen.queryByText('Preview claim completed. Reference: claim-tx-1.')).not.toBeInTheDocument();
+    expect(screen.getByText('Claim submitted for the current session. Reference: claim-tx-1.')).toBeInTheDocument();
+    expect(screen.queryByText('Claim completed for the current session. Reference: claim-tx-1.')).not.toBeInTheDocument();
   });
 
   it('blocks concurrent claim submissions while a claim is already in flight', async () => {
@@ -354,7 +364,7 @@ describe('ClaimCenterPage', () => {
     });
 
     expect(await screen.findByRole('button', { name: 'Claimed' })).toBeDisabled();
-    expect(screen.getByText('Preview claim completed. Reference: claim-tx-1.')).toBeInTheDocument();
+    expect(screen.getByText('Claim completed for the current session. Reference: claim-tx-1.')).toBeInTheDocument();
   });
 
   it('preserves a claimed payout when a stale rescan starts immediately after claim completion', async () => {
@@ -404,7 +414,7 @@ describe('ClaimCenterPage', () => {
     expect(screen.getByText('Umbra Labs')).toBeInTheDocument();
     expect(screen.getByText('claimed')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Claim' })).not.toBeInTheDocument();
-    expect(screen.queryByText('No eligible private payouts were found for the connected wallet preview.')).not.toBeInTheDocument();
+    expect(screen.queryByText('No eligible private payouts were found for the connected wallet session.')).not.toBeInTheDocument();
   });
 
   it.each([
@@ -500,7 +510,7 @@ describe('ClaimCenterPage', () => {
       expect(screen.getByText('Umbra Labs')).toBeInTheDocument();
       expect(screen.getByText(claimStatus)).toBeInTheDocument();
       expect(screen.queryByRole('button', { name: 'Claim' })).not.toBeInTheDocument();
-      expect(screen.queryByText('No eligible private payouts were found for the connected wallet preview.')).not.toBeInTheDocument();
+      expect(screen.queryByText('No eligible private payouts were found for the connected wallet session.')).not.toBeInTheDocument();
     },
   );
 
@@ -528,10 +538,10 @@ describe('ClaimCenterPage', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Claim' }));
 
     expect(await screen.findByRole('alert')).toHaveTextContent('Unable to claim payout.');
-    expect(screen.getByText('If the issue persists, rescan the wallet preview before retrying the claim.')).toBeInTheDocument();
+    expect(screen.getByText('If the issue persists, rescan the current wallet session before retrying the claim.')).toBeInTheDocument();
     expect(screen.getByText('claimable')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Claim' })).toBeEnabled();
-    expect(screen.queryByText('Preview claim completed. Reference: claim-tx-2.')).not.toBeInTheDocument();
+    expect(screen.queryByText('Claim completed for the current session. Reference: claim-tx-2.')).not.toBeInTheDocument();
   });
 
   it('clears previous scan results after the wallet disconnects and reconnects', async () => {
@@ -573,7 +583,7 @@ describe('ClaimCenterPage', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Scan claimable payouts' }));
 
     expect(
-      await screen.findByText('No eligible private payouts were found for the connected wallet preview.'),
+      await screen.findByText('No eligible private payouts were found for the connected wallet session.'),
     ).toBeInTheDocument();
   });
 

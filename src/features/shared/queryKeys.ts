@@ -1,4 +1,4 @@
-import type { WalletNetwork } from '@/providers/WalletProvider';
+import type { SupportedWalletNetwork } from './network';
 
 export const queryKeys = {
   payouts: {
@@ -8,7 +8,7 @@ export const queryKeys = {
   },
   claims: {
     all: () => ['claims'] as const,
-    scan: (walletAddress: string, network: Exclude<WalletNetwork, 'unsupported'>) =>
+    scan: (walletAddress: string, network: SupportedWalletNetwork) =>
       ['claims', 'scan', network, walletAddress] as const,
   },
   disclosure: {

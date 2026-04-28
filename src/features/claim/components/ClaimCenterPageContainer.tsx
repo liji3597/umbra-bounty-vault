@@ -2,9 +2,10 @@
 
 import { useInsertionEffect, useMemo, useRef } from 'react';
 
+import type { WalletNetwork } from '@/features/shared/network';
 import { demoUmbraService } from '@/features/protocol/demoUmbraService';
 import type { ClaimPrivatePayoutResult, ClaimablePayout } from '@/features/claim/schema';
-import { type WalletNetwork, useWallet } from '@/providers/WalletProvider';
+import { useWallet } from '@/providers/WalletProvider';
 
 import {
   ClaimCenterPage,
@@ -18,10 +19,6 @@ type ClaimSession = {
   network: Exclude<WalletNetwork, 'unsupported'>;
 };
 
-function getClaimCenterPreviewWalletAddress(connectionVersion: number): string {
-  return `preview-wallet-${connectionVersion}`;
-}
-
 function getClaimSessionKey(claimSession: ClaimSession): string {
   return `${claimSession.connectionVersion}:${claimSession.walletAddress}:${claimSession.network}`;
 }
@@ -32,6 +29,10 @@ function getSupportedWalletNetwork(network: WalletNetwork): Exclude<WalletNetwor
   }
 
   return network;
+}
+
+function getClaimCenterPreviewWalletAddress(connectionVersion: number): string {
+  return `preview-wallet-${connectionVersion}`;
 }
 
 function getClaimableTokenSymbol(tokenMint: string): string {
@@ -49,11 +50,17 @@ function buildSessionClaimablePayout(
   tokenMint: string,
   claimStatus: ClaimablePayout['claimStatus'],
 ): ClaimablePayout {
+  const normalizedAmount = Number(amount);
+
+  if (!Number.isFinite(normalizedAmount) || String(normalizedAmount) !== amount) {
+    throw new Error('Demo flow payout amount cannot be represented safely in the claim preview.');
+  }
+
   return {
     payoutId,
     senderLabel: getClaimableSenderLabel(network),
     tokenSymbol: getClaimableTokenSymbol(tokenMint),
-    amount: Number(amount),
+    amount: normalizedAmount,
     claimStatus,
   };
 }
@@ -68,7 +75,6 @@ function buildSessionClaimResult(payoutId: string): ClaimPrivatePayoutResult {
 
 export function ClaimCenterPageContainer() {
   const wallet = useWallet();
-  const previewWalletAddress = getClaimCenterPreviewWalletAddress(wallet.connectionVersion);
   const isClaimSessionReady = wallet.status === 'connected' && wallet.isSupportedNetwork;
   const currentClaimSession = useMemo<ClaimSession | null>(() => {
     if (!isClaimSessionReady) {
@@ -77,10 +83,10 @@ export function ClaimCenterPageContainer() {
 
     return {
       connectionVersion: wallet.connectionVersion,
-      walletAddress: previewWalletAddress,
+      walletAddress: wallet.walletAddress ?? getClaimCenterPreviewWalletAddress(wallet.connectionVersion),
       network: getSupportedWalletNetwork(wallet.network),
     };
-  }, [isClaimSessionReady, previewWalletAddress, wallet.connectionVersion, wallet.network]);
+  }, [isClaimSessionReady, wallet.connectionVersion, wallet.network, wallet.walletAddress]);
   const currentClaimSessionKey = currentClaimSession ? getClaimSessionKey(currentClaimSession) : null;
   const activeClaimSessionKeyRef = useRef<string | null>(currentClaimSessionKey);
 
@@ -169,6 +175,7 @@ export function ClaimCenterPageContainer() {
 
   return (
     <ClaimCenterPage
+      walletLabel={wallet.walletLabel ?? 'Connected wallet'}
       scanClaimablePayouts={scanClaimablePayouts}
       claimPrivatePayout={claimPrivatePayout}
     />

@@ -1,15 +1,28 @@
 'use client';
 
+import { createDevnetUmbraService } from '@/features/protocol/devnetUmbraService';
 import { demoUmbraService } from '@/features/protocol/demoUmbraService';
 import { useWallet } from '@/providers/WalletProvider';
 
 import { CreatePayoutPage, type SubmitCreatePayout } from './CreatePayoutPage';
 
-const submitCreatePayout: SubmitCreatePayout = (values) =>
-  demoUmbraService.createPrivatePayout(values);
-
 export function CreatePayoutPageContainer() {
   const wallet = useWallet();
+  const submitCreatePayout: SubmitCreatePayout = async (values) => {
+    if (wallet.network === 'devnet' && wallet.walletAddress && wallet.submitTransaction && wallet.connection) {
+      const devnetUmbraService = createDevnetUmbraService({
+        authority: {
+          walletAddress: wallet.walletAddress,
+          submitTransaction: wallet.submitTransaction,
+        },
+        connection: wallet.connection,
+      });
+
+      return devnetUmbraService.createPrivatePayout(values);
+    }
+
+    return demoUmbraService.createPrivatePayout(values);
+  };
 
   return (
     <CreatePayoutPage

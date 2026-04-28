@@ -1,76 +1,105 @@
-import { render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
-import { AppPlaceholder, DashboardPlaceholder, LandingPlaceholder, PlaceholderPage } from './PlaceholderPage';
+import { useWallet, WalletProvider } from '@/providers/WalletProvider';
+
+import { AppPlaceholder, DashboardPageOverview, PlaceholderPage } from './PlaceholderPage';
 
 describe('PlaceholderPage', () => {
-  it('renders the landing entry surface with required workflow links', () => {
-    render(<LandingPlaceholder />);
+  it('renders the dashboard overview for a disconnected wallet without fake live session state', () => {
+    render(
+      <WalletProvider initialState={{ status: 'disconnected', network: 'devnet' }}>
+        <DashboardPageOverview />
+      </WalletProvider>,
+    );
 
-    expect(screen.getByRole('main')).toBeInTheDocument();
-    expect(
-      screen.getByRole('heading', {
-        name: /Private rewards for bounties, grants, and contributors/i,
-      }),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByText(/Umbra Bounty Vault turns Umbra into a wallet-native reward workflow/i),
-    ).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Enter Dashboard' })).toHaveAttribute('href', '/app/dashboard');
-
-    const createPayoutLinks = screen.getAllByRole('link', { name: 'Create Payout' });
-    expect(createPayoutLinks).toHaveLength(2);
-    expect(createPayoutLinks.map((link) => link.getAttribute('href'))).toEqual([
-      '/app/payouts/new',
-      '/app/payouts/new',
-    ]);
-
-    expect(screen.getByRole('heading', { name: 'One workflow, four surfaces' })).toBeInTheDocument();
-    expect(screen.getByText('1. Create Payout')).toBeInTheDocument();
-    expect(screen.getByText('2. Recipient Claim')).toBeInTheDocument();
-    expect(screen.getByText('3. Scoped Disclosure')).toBeInTheDocument();
-    expect(screen.getByText('4. Activity Trail')).toBeInTheDocument();
-
-    const marketingNavigation = screen.getByRole('navigation', { name: 'Marketing navigation' });
-    const navigationLinks = within(marketingNavigation).getAllByRole('link');
-
-    expect(navigationLinks).toHaveLength(5);
-    expect(navigationLinks.map((link) => link.textContent)).toEqual([
-      'Dashboard',
-      'Create Payout',
-      'Claim Center',
-      'Disclosure',
-      'Activity',
-    ]);
-
-    expect(screen.getByRole('link', { name: 'Open Create Payout' })).toHaveAttribute('href', '/app/payouts/new');
-    expect(screen.getByRole('link', { name: 'Open Recipient Claim' })).toHaveAttribute('href', '/app/claim');
-    expect(screen.getByRole('link', { name: 'Open Scoped Disclosure' })).toHaveAttribute('href', '/app/disclosure');
-    expect(screen.getByRole('link', { name: 'Open Activity Trail' })).toHaveAttribute('href', '/app/activity');
+    expect(screen.getByRole('heading', { name: 'Dashboard' })).toBeInTheDocument();
+    expect(screen.getByText('Solana Devnet')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Start with payout' })).toHaveAttribute('href', '/app/payouts/new');
+    expect(screen.getByText('No linked payout session')).toBeInTheDocument();
+    expect(screen.getByText('Connect a wallet to begin the claim-oriented Phase 1 walkthrough.')).toBeInTheDocument();
+    expect(screen.getByText('Disclosure queue is empty')).toBeInTheDocument();
+    expect(screen.getByText('No payout session is active yet')).toBeInTheDocument();
+    expect(screen.queryByText('Judge review packet')).not.toBeInTheDocument();
   });
 
-  it('renders the dashboard overview surface with core actions and disclosure items', () => {
-    render(<DashboardPlaceholder />);
+  it('renders live-aware connected state before a payout session exists', () => {
+    render(
+      <WalletProvider initialState={{ status: 'connected', network: 'devnet', walletLabel: 'session-wallet' }}>
+        <DashboardPageOverview />
+      </WalletProvider>,
+    );
 
-    expect(screen.getByRole('heading', { name: 'Action Center' })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'View Ledger' })).toHaveAttribute('href', '/app/activity');
-    expect(screen.getByText('Create payout')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Start payout' })).toHaveAttribute('href', '/app/payouts/new');
+    expect(screen.getByText('Start the smallest claim-oriented payout narrative')).toBeInTheDocument();
+    expect(screen.getByText('Create one payout first to activate the linked recipient walkthrough.')).toBeInTheDocument();
+    expect(screen.getByText('Disclosure queue is empty')).toBeInTheDocument();
+    expect(screen.getByText('Connected recipients can scan for a linked claim once a payout has been created.')).toBeInTheDocument();
+  });
 
-    const processClaimsLinks = screen.getAllByRole('link', { name: 'Process claims' });
-    expect(processClaimsLinks).toHaveLength(2);
-    expect(processClaimsLinks.map((link) => link.getAttribute('href'))).toEqual(['/app/claim', '/app/claim']);
+  it('renders wallet-scoped session state after a payout session is saved', () => {
+    function DashboardSessionHarness() {
+      const wallet = useWallet();
 
-    const reviewDisclosureLinks = screen.getAllByRole('link', { name: 'Review disclosure' });
-    expect(reviewDisclosureLinks).toHaveLength(2);
-    expect(reviewDisclosureLinks.map((link) => link.getAttribute('href'))).toEqual([
-      '/app/disclosure',
-      '/app/disclosure',
-    ]);
+      return (
+        <>
+          <button
+            type="button"
+            onClick={() => {
+              wallet.saveDemoFlowSession({
+                payout: {
+                  payoutId: 'session-payout',
+                  transactionHash: 'session-transaction',
+                  status: 'submitted',
+                },
+                draft: {
+                  recipient: 'alice.sol',
+                  tokenMint: 'So11111111111111111111111111111111111111112',
+                  amount: '12.5',
+                  memo: null,
+                  disclosureLevel: 'partial',
+                },
+                network: 'devnet',
+                connectionVersion: wallet.connectionVersion,
+              });
+            }}
+          >
+            Seed session
+          </button>
+          <DashboardPageOverview />
+        </>
+      );
+    }
 
-    expect(screen.getByText('Judge review packet')).toBeInTheDocument();
+    render(
+      <WalletProvider initialState={{ status: 'connected', network: 'devnet', walletLabel: 'session-wallet' }}>
+        <DashboardSessionHarness />
+      </WalletProvider>,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Seed session' }));
+
+    expect(screen.getByRole('link', { name: 'Continue to claim center' })).toHaveAttribute('href', '/app/claim');
+    expect(screen.getByText('Continue the linked claim walkthrough')).toBeInTheDocument();
+    expect(screen.getByText('Claimable payout in current session')).toBeInTheDocument();
+    expect(screen.getByText('One linked recipient walkthrough is enough to tell the Phase 1 demo story.')).toBeInTheDocument();
     expect(screen.getByText('Bounty completion proof')).toBeInTheDocument();
-    expect(screen.getByText('Keep the lifecycle readable')).toBeInTheDocument();
+    expect(screen.getByText('Partial disclosure • prepared for linked review')).toBeInTheDocument();
+    expect(screen.getByText('Payout session is active')).toBeInTheDocument();
+    expect(screen.getByText('Claim remains available')).toBeInTheDocument();
+  });
+
+  it('falls back to the payout entry action on unsupported networks', () => {
+    render(
+      <WalletProvider initialState={{ status: 'connected', network: 'unsupported', walletLabel: 'session-wallet' }}>
+        <DashboardPageOverview />
+      </WalletProvider>,
+    );
+
+    expect(screen.getByRole('link', { name: 'Start with payout' })).toHaveAttribute('href', '/app/payouts/new');
+    expect(screen.getByText('Unsupported network')).toBeInTheDocument();
+    expect(
+      screen.getByText('Switch to a supported network before using claim, disclosure, or activity surfaces.'),
+    ).toBeInTheDocument();
   });
 
   it('renders app placeholder route content and metadata', () => {

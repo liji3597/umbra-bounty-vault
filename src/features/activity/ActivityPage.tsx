@@ -57,7 +57,7 @@ function getClaimablePayoutSummary(
   );
 
   if (!matchingClaimablePayout) {
-    return 'No claimable payouts are queued in this preview narrative.';
+    return 'No claimable payouts are queued in this wallet-scoped narrative.';
   }
 
   return `${matchingClaimablePayout.senderLabel} · ${matchingClaimablePayout.amount} ${matchingClaimablePayout.tokenSymbol}`;
@@ -89,24 +89,24 @@ function getNarrativeErrorMessage(narrative: ActivityNarrative): string | null {
 function buildTimelineItems(narrative: ActivityNarrative): ActivityTimelineItem[] {
   const claimTimelineItem = narrative.claimResult
     ? {
-        title: 'Recipient claim completed',
+        title: 'Recipient claim recorded',
         body: [
-          `Claim result: ${narrative.claimResult.claimStatus}`,
-          `Transaction: ${narrative.claimResult.transactionHash}`,
+          `Claim status: ${narrative.claimResult.claimStatus}`,
+          `Session reference: ${narrative.claimResult.transactionHash}`,
         ],
       }
     : {
         title: 'Recipient claim pending',
-        body: ['Claim result: claimable', 'Transaction: awaiting recipient claim'],
+        body: ['Claim status: claimable', 'Session reference: awaiting recipient claim'],
       };
 
   return [
     {
-      title: 'Preview payout submitted',
-      description: 'Private payout is prepared through the typed preview service boundary.',
+      title: 'Payout submitted',
+      description: 'This flow keeps payout state tied to the typed service boundary used across the app.',
       body: [
         `Reference: ${narrative.payout.payoutId}`,
-        `Transaction: ${narrative.payout.transactionHash}`,
+        `Session reference: ${narrative.payout.transactionHash}`,
       ],
     },
     {
@@ -184,8 +184,9 @@ export function ActivityPage({ loadActivityNarrative }: ActivityPageProps) {
         </Badge>
         <h1 className="page-title">Activity</h1>
         <p className="page-description">
-          Follow one coherent preview narrative across payout submission, claim progress, and
-          bounded disclosure output.
+          Follow one coherent wallet-scoped narrative across payout submission, claim progress, and
+          bounded disclosure output. When no active demo session exists, this surface falls back to a
+          prepared preview narrative instead of implying a fully live end-to-end replay.
         </p>
         <div aria-label="Activity meta" className="disclosure-page__badges">
           <Badge>Cross-flow narrative</Badge>
@@ -200,11 +201,11 @@ export function ActivityPage({ loadActivityNarrative }: ActivityPageProps) {
           </h2>
           <Panel
             className="disclosure-page__status activity-page__status"
-            description="P6 starts with a minimal activity timeline assembled through the existing typed service boundary."
+            description="This page assembles payout, claim, and disclosure state through the existing typed service boundary."
           >
             <p>
-              This page links payout, claim, and disclosure preview outputs into one stable narrative
-              instead of rendering isolated logs.
+              This page links payout, claim, and disclosure outputs into one stable narrative and
+              stays honest about the current preview fallback when a matching wallet session is unavailable.
             </p>
           </Panel>
         </section>
@@ -267,12 +268,12 @@ export function ActivityPage({ loadActivityNarrative }: ActivityPageProps) {
 
             <Panel heading="Next action" role="region" aria-label="Next action">
               <p>Start another payout or return to the landing narrative for the next demo pass.</p>
-              <ul>
+              <ul className="app-link-list">
                 <li>
-                  <Link href={CREATE_PAYOUT_ROUTE.href}>Create another payout</Link>
+                  <Link className="app-inline-link" href={CREATE_PAYOUT_ROUTE.href}>Create another payout</Link>
                 </li>
                 <li>
-                  <Link href={MARKETING_ROUTE.href}>Return to landing</Link>
+                  <Link className="app-inline-link" href={MARKETING_ROUTE.href}>Return to landing</Link>
                 </li>
               </ul>
             </Panel>

@@ -1,6 +1,12 @@
+import type { ReactNode } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { render, screen } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
+
+vi.mock('./SolanaWalletBridgeProvider', () => ({
+  SolanaWalletBridgeProvider: ({ children }: { children: ReactNode }) => <>{children}</>,
+  useSolanaWalletBridge: () => null,
+}));
 
 import { Providers } from './Providers';
 import { useWallet } from './WalletProvider';
@@ -31,4 +37,3 @@ describe('Providers', () => {
     expect(screen.getByText('Solana Devnet')).toBeInTheDocument();
   });
 });
-

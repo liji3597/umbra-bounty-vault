@@ -1,19 +1,18 @@
 import type {
+  BuildDisclosureViewInput,
   ClaimPrivatePayoutInput,
   ClaimPrivatePayoutResult,
   ClaimablePayout,
-  ScanClaimablePayoutsInput,
-} from '@/features/claim/schema';
-import type { BuildDisclosureViewInput, DisclosureView } from '@/features/disclosure/schema';
-import type {
-  CreatePayoutFormInput,
-  CreatePayoutFormValues,
+  CreatePrivatePayoutInput,
   CreatePrivatePayoutResult,
+  CreatePrivatePayoutValues,
   PayoutStatus,
-} from '@/features/payout/schema';
+  ScanClaimablePayoutsInput,
+  DisclosureView,
+} from './schema';
 
 export interface UmbraServiceGateway {
-  createPrivatePayout(input: CreatePayoutFormValues): Promise<unknown>;
+  createPrivatePayout(input: CreatePrivatePayoutValues): Promise<unknown>;
   getPayoutStatus(payoutId: string): Promise<unknown>;
   scanClaimablePayouts(input: ScanClaimablePayoutsInput): Promise<unknown>;
   claimPrivatePayout(input: ClaimPrivatePayoutInput): Promise<unknown>;
@@ -21,7 +20,7 @@ export interface UmbraServiceGateway {
 }
 
 export interface UmbraService {
-  createPrivatePayout(input: CreatePayoutFormInput): Promise<CreatePrivatePayoutResult>;
+  createPrivatePayout(input: CreatePrivatePayoutInput): Promise<CreatePrivatePayoutResult>;
   getPayoutStatus(payoutId: string): Promise<PayoutStatus>;
   scanClaimablePayouts(input: ScanClaimablePayoutsInput): Promise<ClaimablePayout[]>;
   claimPrivatePayout(input: ClaimPrivatePayoutInput): Promise<ClaimPrivatePayoutResult>;

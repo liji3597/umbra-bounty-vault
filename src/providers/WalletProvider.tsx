@@ -4,16 +4,30 @@ import {
   createContext,
   useCallback,
   useContext,
+  useInsertionEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from 'react';
 
+import type {
+  Connection,
+  Transaction,
+} from '@solana/web3.js';
+
+import type { WalletNetwork } from '@/features/shared/network';
 import type { ClaimPrivatePayoutResult } from '@/features/claim/schema';
 import type { CreatePayoutFormValues, CreatePrivatePayoutResult } from '@/features/payout/schema';
 
+import { useSolanaWalletBridge } from './SolanaWalletBridgeProvider';
+
 export type WalletStatus = 'initializing' | 'disconnected' | 'connected' | 'error';
-export type WalletNetwork = 'devnet' | 'mainnet' | 'unsupported';
+export type SolanaWalletConnection = Pick<Connection, 'confirmTransaction' | 'getLatestBlockhashAndContext'>;
+export type SolanaWalletSubmitTransaction = (
+  transaction: Transaction,
+  minContextSlot: number,
+) => Promise<string>;
 
 export interface WalletProviderState {
   status: WalletStatus;
@@ -36,6 +50,9 @@ export interface WalletContextValue extends WalletProviderState {
   isSupportedNetwork: boolean;
   networkLabel: string;
   connectionVersion: number;
+  walletAddress: string | null;
+  submitTransaction: SolanaWalletSubmitTransaction | null;
+  connection: SolanaWalletConnection | null;
   demoFlowSession: DemoFlowSession | null;
   saveDemoFlowSession: (session: Omit<DemoFlowSession, 'claimResult'>) => void;
   updateDemoFlowClaimResult: (claimResult: ClaimPrivatePayoutResult) => void;
@@ -45,7 +62,6 @@ export interface WalletContextValue extends WalletProviderState {
 interface WalletSessionState {
   connectionVersion: number;
   walletState: WalletProviderState;
-  demoFlowSession: DemoFlowSession | null;
 }
 
 const DEFAULT_WALLET_STATE: WalletProviderState = {
@@ -82,7 +98,6 @@ function createInitialWalletSessionState(
   return {
     connectionVersion: 0,
     walletState: createInitialWalletState(initialState),
-    demoFlowSession: null,
   };
 }
 
@@ -97,8 +112,16 @@ export function WalletProvider({ children, initialState }: WalletProviderProps) 
   const [walletSession, setWalletSession] = useState<WalletSessionState>(() =>
     createInitialWalletSessionState(initialState),
   );
+  const [demoFlowSession, setDemoFlowSession] = useState<DemoFlowSession | null>(null);
+  const solanaWalletBridge = useSolanaWalletBridge();
+  const latestWalletSessionRef = useRef<{ connectionVersion: number; network: WalletNetwork; isSupportedNetwork: boolean } | null>(null);
 
   const connect = useCallback(() => {
+    if (solanaWalletBridge) {
+      solanaWalletBridge.connect();
+      return;
+    }
+
     setWalletSession((currentSession) => {
       const { walletState } = currentSession;
 
@@ -118,12 +141,17 @@ export function WalletProvider({ children, initialState }: WalletProviderProps) 
           walletLabel: walletState.walletLabel ?? DEFAULT_CONNECTED_WALLET_LABEL,
           message: null,
         },
-        demoFlowSession: null,
       };
     });
-  }, []);
+    setDemoFlowSession(null);
+  }, [solanaWalletBridge]);
 
   const disconnect = useCallback(() => {
+    if (solanaWalletBridge) {
+      solanaWalletBridge.disconnect();
+      return;
+    }
+
     setWalletSession((currentSession) => {
       const { walletState } = currentSession;
 
@@ -139,62 +167,94 @@ export function WalletProvider({ children, initialState }: WalletProviderProps) 
           walletLabel: null,
           message: null,
         },
-        demoFlowSession: null,
+      };
+    });
+    setDemoFlowSession(null);
+  }, [solanaWalletBridge]);
+
+  const saveDemoFlowSession = useCallback((session: Omit<DemoFlowSession, 'claimResult'>) => {
+    setDemoFlowSession((currentSession) => {
+      const latestWalletSession = latestWalletSessionRef.current;
+
+      if (
+        !latestWalletSession ||
+        !latestWalletSession.isSupportedNetwork ||
+        latestWalletSession.connectionVersion !== session.connectionVersion ||
+        latestWalletSession.network !== session.network
+      ) {
+        return currentSession;
+      }
+
+      return {
+        ...session,
+        claimResult: null,
       };
     });
   }, []);
 
-  const saveDemoFlowSession = useCallback((session: Omit<DemoFlowSession, 'claimResult'>) => {
-    setWalletSession((currentSession) => ({
-      ...currentSession,
-      demoFlowSession: {
-        ...session,
-        claimResult: null,
-      },
-    }));
-  }, []);
-
   const updateDemoFlowClaimResult = useCallback((claimResult: ClaimPrivatePayoutResult) => {
-    setWalletSession((currentSession) => {
-      if (!currentSession.demoFlowSession) {
+    setDemoFlowSession((currentSession) => {
+      if (!currentSession) {
         return currentSession;
       }
 
-      if (currentSession.demoFlowSession.payout.payoutId !== claimResult.payoutId) {
+      if (currentSession.payout.payoutId !== claimResult.payoutId) {
         return currentSession;
       }
 
       return {
         ...currentSession,
-        demoFlowSession: {
-          ...currentSession.demoFlowSession,
-          claimResult,
-        },
+        claimResult,
       };
     });
   }, []);
 
   const clearDemoFlowSession = useCallback(() => {
-    setWalletSession((currentSession) => ({
-      ...currentSession,
-      demoFlowSession: null,
-    }));
+    setDemoFlowSession(null);
   }, []);
+
+  const activeWalletState = solanaWalletBridge?.walletState ?? walletSession.walletState;
+  const activeConnectionVersion = solanaWalletBridge?.connectionVersion ?? walletSession.connectionVersion;
+  const isActiveWalletSupported = activeWalletState.network !== 'unsupported';
+
+  useInsertionEffect(() => {
+    latestWalletSessionRef.current = {
+      connectionVersion: activeConnectionVersion,
+      network: activeWalletState.network,
+      isSupportedNetwork: isActiveWalletSupported,
+    };
+  }, [activeConnectionVersion, activeWalletState.network, isActiveWalletSupported]);
 
   const contextValue = useMemo<WalletContextValue>(
     () => ({
-      ...walletSession.walletState,
+      ...activeWalletState,
       connect,
       disconnect,
-      isSupportedNetwork: walletSession.walletState.network !== 'unsupported',
-      networkLabel: getNetworkLabel(walletSession.walletState.network),
-      connectionVersion: walletSession.connectionVersion,
-      demoFlowSession: walletSession.demoFlowSession,
+      isSupportedNetwork: isActiveWalletSupported,
+      networkLabel: getNetworkLabel(activeWalletState.network),
+      connectionVersion: activeConnectionVersion,
+      walletAddress: solanaWalletBridge?.walletAddress ?? null,
+      submitTransaction: solanaWalletBridge?.submitTransaction ?? null,
+      connection: solanaWalletBridge?.connection ?? null,
+      demoFlowSession,
       saveDemoFlowSession,
       updateDemoFlowClaimResult,
       clearDemoFlowSession,
     }),
-    [clearDemoFlowSession, connect, disconnect, saveDemoFlowSession, updateDemoFlowClaimResult, walletSession],
+    [
+      activeConnectionVersion,
+      activeWalletState,
+      clearDemoFlowSession,
+      connect,
+      demoFlowSession,
+      disconnect,
+      isActiveWalletSupported,
+      saveDemoFlowSession,
+      solanaWalletBridge?.connection,
+      solanaWalletBridge?.submitTransaction,
+      solanaWalletBridge?.walletAddress,
+      updateDemoFlowClaimResult,
+    ],
   );
 
   return <WalletContext.Provider value={contextValue}>{children}</WalletContext.Provider>;

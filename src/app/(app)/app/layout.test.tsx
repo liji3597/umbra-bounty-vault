@@ -26,7 +26,7 @@ describe('AppLayout', () => {
     );
 
     expect(screen.getByText('App layout content')).toBeInTheDocument();
-    expect(screen.getByText('Privacy-first reward workflow')).toBeInTheDocument();
+    expect(screen.getByText('Private reward workflow')).toBeInTheDocument();
     expect(screen.getByText('Dashboard')).toBeInTheDocument();
     expect(screen.getByText('probe-status:disconnected')).toBeInTheDocument();
     expect(screen.getByText('probe-network:Solana Devnet')).toBeInTheDocument();

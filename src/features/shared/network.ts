@@ -1,9 +1,6 @@
 import { z } from 'zod';
 
-import type { WalletNetwork } from '@/providers/WalletProvider';
+export type SupportedWalletNetwork = 'devnet' | 'mainnet';
+export type WalletNetwork = SupportedWalletNetwork | 'unsupported';
 
-export const supportedWalletNetworkSchema = z.enum(['devnet', 'mainnet']) satisfies z.ZodType<
-  Exclude<WalletNetwork, 'unsupported'>
->;
-
-export type SupportedWalletNetwork = z.infer<typeof supportedWalletNetworkSchema>;
+export const supportedWalletNetworkSchema = z.enum(['devnet', 'mainnet']) satisfies z.ZodType<SupportedWalletNetwork>;

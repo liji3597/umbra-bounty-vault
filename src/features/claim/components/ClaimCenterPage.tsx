@@ -15,6 +15,7 @@ export type ScanClaimablePayouts = () => Promise<ClaimablePayout[]>;
 export type ClaimPrivatePayout = (payoutId: string) => Promise<ClaimPrivatePayoutResult>;
 
 interface ClaimCenterPageProps {
+  walletLabel?: string;
   scanClaimablePayouts?: ScanClaimablePayouts;
   claimPrivatePayout?: ClaimPrivatePayout;
 }
@@ -28,12 +29,12 @@ const DEFAULT_CLAIM_ERROR_MESSAGE = 'Unable to claim payout.';
 const WALLET_CONNECTION_ERROR_MESSAGE = 'Wallet connection is unavailable.';
 const CLAIM_CENTER_WALLET_LABEL = 'Embedded wallet preview';
 const CLAIM_CENTER_PRIVACY_GUIDANCE =
-  'Scanning stays scoped to the connected preview wallet and never asks for extra recipient details.';
+  'Scanning stays scoped to the connected wallet session and never asks for extra recipient details.';
 const CLAIM_CENTER_SCAN_PROGRESS_GUIDANCE =
-  'Keep this wallet connected while the preview checks for private payouts.';
+  'Keep this wallet connected while the current session checks for private payouts.';
 const CLAIM_CENTER_SCAN_RECOVERY_GUIDANCE = 'Confirm the wallet stays connected, then scan again.';
 const CLAIM_CENTER_CLAIM_RECOVERY_GUIDANCE =
-  'If the issue persists, rescan the wallet preview before retrying the claim.';
+  'If the issue persists, rescan the current wallet session before retrying the claim.';
 const CLAIM_CENTER_RESULTS_TITLE = 'Claimable payouts found';
 const DISCLOSURE_ROUTE = getAppRoute('/app/disclosure');
 const ACTIVITY_ROUTE = getAppRoute('/app/activity');
@@ -65,10 +66,10 @@ function getScanErrorMessage(error: unknown): string {
 
 function getClaimFeedbackMessage(result: ClaimPrivatePayoutResult): string {
   if (result.claimStatus === 'pending') {
-    return `Preview claim submitted. Reference: ${result.transactionHash}.`;
+    return `Claim submitted for the current session. Reference: ${result.transactionHash}.`;
   }
 
-  return `Preview claim completed. Reference: ${result.transactionHash}.`;
+  return `Claim completed for the current session. Reference: ${result.transactionHash}.`;
 }
 
 function mergeClaimablePayouts(
@@ -213,7 +214,7 @@ function ClaimCenterPageContent({
 
     claimInFlightRef.current = true;
     setClaimError(null);
-    setClaimFeedback('Submitting preview claim.');
+    setClaimFeedback('Submitting claim for the current session.');
     setActiveClaimPayoutId(payoutId);
 
     try {
@@ -269,7 +270,8 @@ function ClaimCenterPageContent({
         </Badge>
         <h1 className="page-title">Claim Center</h1>
         <p className="page-description">
-          Review the connected wallet preview, scan for claimable payouts, and track the current state.
+          Review the connected wallet session, scan for claimable payouts, and stay within the
+          current wallet-scoped claim demo boundary.
         </p>
         <div className="claim-center-page__badges" aria-label="Claim center meta">
           <Badge>{networkLabel}</Badge>
@@ -281,12 +283,12 @@ function ClaimCenterPageContent({
       <Panel
         className="claim-center-page__status"
         heading="Wallet scan"
-        description="This slice keeps discovery UI-only until wallet address and protocol wiring are ready."
+        description="This claim path stays scoped to the connected wallet session and preserves continuity with the payout narrative without implying a full live devnet claim indexer."
       >
         <p>
           {phase === 'scanning'
-            ? 'Scanning connected wallet preview for claimable payouts.'
-            : 'Scan the connected wallet preview for claimable payouts.'}
+            ? 'Scanning the connected wallet session for claimable payouts within the current demo boundary.'
+            : 'Scan the connected wallet session for claimable payouts within the current demo boundary.'}
         </p>
         <p>{CLAIM_CENTER_PRIVACY_GUIDANCE}</p>
         {phase === 'scanning' ? <p>{CLAIM_CENTER_SCAN_PROGRESS_GUIDANCE}</p> : null}
@@ -307,7 +309,7 @@ function ClaimCenterPageContent({
           </h2>
           <Panel
             className="claim-center-page__results"
-            description="Eligible payouts stay visible here until real claim execution is wired in."
+            description="Eligible payouts remain visible here as the current wallet session moves through claim and next-step review."
           >
             <div className="claim-center-page__cards" role="list">
               {claimablePayouts.map((payout) => (
@@ -330,12 +332,12 @@ function ClaimCenterPageContent({
             Continue the reward lifecycle in Disclosure / Verification or review the combined
             narrative in Activity.
           </p>
-          <ul>
+          <ul className="app-link-list">
             <li>
-              <Link href={DISCLOSURE_ROUTE.href}>Review disclosure preview</Link>
+              <Link className="app-inline-link" href={DISCLOSURE_ROUTE.href}>Review disclosure package</Link>
             </li>
             <li>
-              <Link href={ACTIVITY_ROUTE.href}>Review activity narrative</Link>
+              <Link className="app-inline-link" href={ACTIVITY_ROUTE.href}>Review activity narrative</Link>
             </li>
           </ul>
         </Panel>
@@ -343,7 +345,7 @@ function ClaimCenterPageContent({
 
       {phase === 'empty' ? (
         <Panel className="claim-center-page__empty">
-          <p>No eligible private payouts were found for the connected wallet preview.</p>
+          <p>No eligible private payouts were found for the connected wallet session.</p>
         </Panel>
       ) : null}
 
@@ -365,6 +367,7 @@ function ClaimCenterPageContent({
 }
 
 export function ClaimCenterPage({
+  walletLabel,
   scanClaimablePayouts = previewScanClaimablePayouts,
   claimPrivatePayout = previewClaimPrivatePayout,
 }: ClaimCenterPageProps) {
@@ -421,7 +424,7 @@ export function ClaimCenterPage({
           </Badge>
           <h1 className="page-title">Claim Center</h1>
           <p className="page-description">
-            Connect a supported wallet to preview claimable private payouts.
+            Connect a supported wallet to enter the claim-oriented payout flow.
           </p>
         </Panel>
         <Panel className="claim-center-page__status">
@@ -429,7 +432,7 @@ export function ClaimCenterPage({
           <button type="button" onClick={wallet.connect}>
             Connect wallet
           </button>
-          <p>Scan the connected wallet preview for claimable payouts.</p>
+          <p>Connect a supported wallet to preview the wallet-scoped claim flow within the current demo boundary.</p>
         </Panel>
       </section>
     );
@@ -439,7 +442,7 @@ export function ClaimCenterPage({
     <ClaimCenterPageContent
       key={`${wallet.status}:${wallet.network}:${wallet.connectionVersion}`}
       networkLabel={wallet.networkLabel}
-      walletLabel={CLAIM_CENTER_WALLET_LABEL}
+      walletLabel={walletLabel ?? CLAIM_CENTER_WALLET_LABEL}
       scanClaimablePayouts={scanClaimablePayouts}
       claimPrivatePayout={claimPrivatePayout}
     />

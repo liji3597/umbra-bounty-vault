@@ -7,6 +7,7 @@ import {
 } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
 
+import { SolanaWalletBridgeProvider } from './SolanaWalletBridgeProvider';
 import { WalletProvider } from './WalletProvider';
 
 interface ProvidersProps {
@@ -40,7 +41,9 @@ export function Providers({ children }: ProvidersProps) {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <WalletProvider>{children}</WalletProvider>
+      <SolanaWalletBridgeProvider>
+        <WalletProvider>{children}</WalletProvider>
+      </SolanaWalletBridgeProvider>
     </QueryClientProvider>
   );
 }

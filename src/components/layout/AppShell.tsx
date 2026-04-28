@@ -14,12 +14,9 @@ export function AppShell({ children }: AppShellProps) {
     <div className="app-shell">
       <header className="app-shell__header">
         <div className="app-shell__brand-row">
-          <span aria-hidden="true" className="app-shell__menu-mark">
-            ≡
-          </span>
           <div>
-            <p className="app-shell__eyebrow">The Ledger</p>
-            <p className="app-shell__title">Privacy-first reward workflow</p>
+            <p className="app-shell__eyebrow">Umbra Bounty Vault</p>
+            <p className="app-shell__title">Private reward workflow</p>
           </div>
         </div>
         <div className="app-shell__wallet-slot">

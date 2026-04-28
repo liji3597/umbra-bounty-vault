@@ -33,7 +33,7 @@
 | Phase | 名称 | 目标 | 是否阻塞后续 | 当前状态 |
 |---|---|---|---|---|
 | P0 | Foundation Lock | 锁定 repo/脚手架/接口边界/参考架构 | 是 | 已完成 |
-| P1 | Prototype & Design Refinement | 产出 Stitch 原型与视觉/交互定稿 | 是 | 已完成 |
+| P1 | Prototype & Design Refinement | 产出 Stitch 原型与视觉/交互定稿 | 是 | 部分完成 |
 | P2 | App Shell & Infrastructure | 建好应用骨架、provider、导航、状态容器 | 是 | 已完成 |
 | P3 | Payout Flow | 完成 Create Payout 主链路 | 是 | 已完成 |
 | P4 | Claim Flow | 完成 Claim Center 主链路 | 是 | 已完成 |
@@ -43,6 +43,7 @@
 | P8 | Submission Package | 产出演示与提交材料 | 是 | 部分完成 |
 
 > 当前状态按仓库现状保守标记：`已完成` 表示主目标已闭环，`部分完成` 表示已有实现或文档产物，但仍未完全收口。
+> 当前 Phase 1 应统一按 **A2-leaning** 方向理解：以 **devnet-first + single-asset** 范围优先完成最小 claim-oriented payout narrative，并让 Disclosure / Activity 保持 **live-aware**、但不夸大为 fully live protocol closure。
 
 ---
 
@@ -584,7 +585,7 @@
 **当前收口备注:**
 - 浏览器人工验收已覆盖 Landing / Dashboard 与 create -> claim -> disclosure -> activity 主路径
 - Lighthouse / 可访问性问题已完成一轮修复与复验
-- 现有 Playwright golden-path 用例仍有文案断言漂移，需要单独更新后再宣称自动化 E2E 全绿
+- 当前 Playwright golden-path 用例已按现状通过，但仍不能把自动化覆盖表述为完整的 failure-path / 全量 E2E 收口
 
 ---
 
@@ -638,7 +639,7 @@
 **当前收口备注:**
 - 提交材料应明确采用浏览器已验证的 demo 顺序与页面口径
 - 所有素材需避免把当前实现表述成 production-complete protocol integration
-- 若引用自动化测试状态，应注明 Playwright golden-path 仍待按当前 UI 文案刷新
+- 若引用自动化测试状态，应表述为：当前 linked demo session 的 Playwright golden-path 已通过，但 failure-path 自动化覆盖仍未完整
 
 ---
 
@@ -779,12 +780,11 @@ P1-2 原型修正定稿
 - `src/lib/routes.ts`
 - 当前页面范围与 `SPEC.md` 一致：`Landing`、`Dashboard`、`Create Payout`、`Claim Center`、`Disclosure / Verification`、`Activity`
 
-**仍偏 placeholder 的页面：**
-- `src/app/(marketing)/page.tsx` 当前直接渲染 `LandingPlaceholder`
-- `src/components/layout/PlaceholderPage.tsx` 中的 `LandingPlaceholder` 与 `AppPlaceholder`
-- `AppPlaceholder` 明确写明：
-  - `Current phase = P2 App Shell & Infrastructure`
-  - `Status = Placeholder surface ready for feature implementation.`
+**当前页面收口状态：**
+- `src/app/(marketing)/page.tsx` 当前直接渲染 `MarketingLandingPage`
+- Landing 已具备真实营销叙事与生命周期表达，不应再写成 placeholder
+- `src/app/(app)/app/dashboard/page.tsx` 当前仍渲染 `DashboardPlaceholder`
+- `src/components/layout/PlaceholderPage.tsx` 中的 `AppPlaceholder` 仍代表 Dashboard 等 app shell 收口前的占位状态
 
 **已有真实实现骨架的页面 / 模块：**
 - `src/features/payout/components/CreatePayoutPageContainer.tsx`
@@ -979,7 +979,7 @@ P1 **不宜标记为 fully done**。
 - `DESIGN.md` 已锁定视觉方向、组件角色与页面级约束
 
 **说明 P1 仍未完全完成的内容：**
-- `src/app/(marketing)/page.tsx` 仍使用 `LandingPlaceholder`
+- `src/app/(app)/app/dashboard/page.tsx` 仍使用 `DashboardPlaceholder`
 - `src/components/layout/PlaceholderPage.tsx` 中 `AppPlaceholder` 仍把一部分 app 页面显式标记为 placeholder surface
 - 当前仓库中尚无“Stitch 最终稿 / 页面导出链接 / 修正清单 / 组件映射表”这类正式设计资产
 
@@ -996,8 +996,8 @@ P1 **不宜标记为 fully done**。
 - “**基于现有实现补齐设计收口包**”
 
 优先级建议如下：
-1. **Landing**：高优先级重做/补强
-2. **Dashboard**：高优先级从 placeholder 升级为 workflow overview
+1. **Dashboard**：高优先级从 placeholder 升级为 workflow overview
+2. **Landing**：在既有真实营销页基础上继续补强层级、叙事与 judge-facing 表达
 3. **Create Payout / Claim Center / Disclosure / Activity**：保留现有结构，主要做视觉、叙事与层级精修
 4. 产出正式 `P1-2` 修正清单
 5. 产出正式 `P1-3` 组件 inventory 与页面映射表
@@ -1093,7 +1093,7 @@ P2 可以表述为：
 - **P1：部分被后续实现反向满足，但正式设计资产仍需补齐，因此不算 fully done。**
 - **P2：基础设施与 typed boundary 已大体完成，可作为后续功能与 demo 的稳定底座。**
 - **P6：活动流、状态串联与叙事闭环已经完成，可作为对外 demo 主线。**
-- **P7：已完成浏览器端 responsive / a11y 主路径验收，并修复至少一项真实可访问性问题；自动化 E2E 仍有断言漂移需要单独收口。**
+- **P7：已完成浏览器端 responsive / a11y 主路径验收，并修复至少一项真实可访问性问题；当前 Playwright golden-path 主路径已通过，但 failure-path 自动化覆盖仍需继续补齐。**
 - **P8：提交文案与演示口径应以“已验证的 linked demo session + 保守范围声明”作为统一表述。**
 - 后续若继续补文档、原型与 submission，应统一采用以下口径：
   - 这是一个 **privacy-first reward workflow**

@@ -32,6 +32,16 @@ describe('DisclosurePage', () => {
     expect(await screen.findByText('Recipient verification package')).toBeInTheDocument();
     expect(screen.getByText('Bounded recipient access is available for this payout preview.')).toBeInTheDocument();
     expect(screen.getByText('Reference: preview-disclosure')).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        'Review a bounded disclosure package through the typed service boundary. This surface stays coherent with the reward narrative without implying one exact live continuation from the prior step.',
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        'This view requests a prepared disclosure package through the typed service boundary while staying aligned with the payout and claim narrative.',
+      ),
+    ).toBeInTheDocument();
 
     const revealedFields = screen.getByRole('region', { name: 'Revealed fields' });
     const verificationArtifacts = screen.getByRole('region', { name: 'Verification artifacts' });

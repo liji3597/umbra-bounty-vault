@@ -43,7 +43,7 @@
   --shadow-overlay: 0 32px 64px rgba(46, 52, 45, 0.18);
   --blur-surface: 12px;
 
-  --font-sans: var(--font-manrope), Arial, Helvetica, sans-serif;
+  --font-sans: var(--font-inter), Arial, Helvetica, sans-serif;
   --font-serif: var(--font-newsreader), 'Times New Roman', serif;
   --font-size-label: 0.75rem;
   --font-size-body: 1rem;

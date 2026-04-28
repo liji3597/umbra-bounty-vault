@@ -1,6 +1,8 @@
+import { ZodError } from 'zod';
 import { describe, expect, it, vi } from 'vitest';
 
 import { createDemoUmbraGateway } from './demoUmbraGateway';
+import { PayoutSubmissionError } from './payoutSubmission';
 import { createUmbraService, createNotImplementedUmbraService } from './umbraService';
 
 describe('umbraService', () => {
@@ -41,7 +43,67 @@ describe('umbraService', () => {
     });
   });
 
-  it('rejects gateway results that do not match app-facing schemas', async () => {
+  it('maps zod validation failures to a classified parameter error', async () => {
+    const createPrivatePayout = vi.fn();
+    const service = createUmbraService({
+      createPrivatePayout,
+      getPayoutStatus: vi.fn(),
+      scanClaimablePayouts: vi.fn(),
+      claimPrivatePayout: vi.fn(),
+      buildDisclosureView: vi.fn(),
+    });
+
+    await expect(
+      service.createPrivatePayout({
+        recipient: 'alice.sol',
+        tokenMint: 'So11111111111111111111111111111111111111112',
+        amount: 8,
+        disclosureLevel: 'none',
+      }),
+    ).rejects.toEqual(new PayoutSubmissionError('parameter'));
+
+    expect(createPrivatePayout).not.toHaveBeenCalled();
+  });
+
+  it('maps signing-like gateway failures to a classified signing error', async () => {
+    const service = createUmbraService({
+      createPrivatePayout: vi.fn().mockRejectedValue(new Error('User rejected the signature request.')),
+      getPayoutStatus: vi.fn(),
+      scanClaimablePayouts: vi.fn(),
+      claimPrivatePayout: vi.fn(),
+      buildDisclosureView: vi.fn(),
+    });
+
+    await expect(
+      service.createPrivatePayout({
+        recipient: 'alice.sol',
+        tokenMint: 'So11111111111111111111111111111111111111112',
+        amount: '8',
+        disclosureLevel: 'none',
+      }),
+    ).rejects.toEqual(new PayoutSubmissionError('signing'));
+  });
+
+  it('maps rpc-like gateway failures to a classified network error', async () => {
+    const service = createUmbraService({
+      createPrivatePayout: vi.fn().mockRejectedValue(new Error('RPC timeout while submitting transaction.')),
+      getPayoutStatus: vi.fn(),
+      scanClaimablePayouts: vi.fn(),
+      claimPrivatePayout: vi.fn(),
+      buildDisclosureView: vi.fn(),
+    });
+
+    await expect(
+      service.createPrivatePayout({
+        recipient: 'alice.sol',
+        tokenMint: 'So11111111111111111111111111111111111111112',
+        amount: '8',
+        disclosureLevel: 'none',
+      }),
+    ).rejects.toEqual(new PayoutSubmissionError('network'));
+  });
+
+  it('propagates invalid gateway payout results instead of misclassifying them as parameter errors', async () => {
     const service = createUmbraService({
       createPrivatePayout: vi.fn().mockResolvedValue({
         payoutId: 'payout-1',
@@ -60,7 +122,7 @@ describe('umbraService', () => {
         amount: '8',
         disclosureLevel: 'none',
       }),
-    ).rejects.toThrow();
+    ).rejects.toBeInstanceOf(ZodError);
   });
 
   it('validates scan input before calling the gateway and returns typed claimable payouts', async () => {

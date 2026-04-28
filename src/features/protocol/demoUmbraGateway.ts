@@ -1,18 +1,13 @@
 import type {
   BuildDisclosureViewInput,
-  DisclosureView,
-} from '@/features/disclosure/schema';
-import type {
   ClaimPrivatePayoutInput,
   ClaimPrivatePayoutResult,
   ClaimablePayout,
-  ScanClaimablePayoutsInput,
-} from '@/features/claim/schema';
-import type {
-  CreatePayoutFormValues,
   CreatePrivatePayoutResult,
-} from '@/features/payout/schema';
-
+  CreatePrivatePayoutValues,
+  DisclosureView,
+  ScanClaimablePayoutsInput,
+} from './schema';
 import type { UmbraServiceGateway } from './umbraService.types';
 
 type UnsupportedGatewayMethod = Exclude<
@@ -37,7 +32,7 @@ function getRecipientSlug(recipient: string): string {
   return recipientSlug || 'payout';
 }
 
-function createPreviewPayoutResult(input: CreatePayoutFormValues): CreatePrivatePayoutResult {
+function createPreviewPayoutResult(input: CreatePrivatePayoutValues): CreatePrivatePayoutResult {
   return {
     payoutId: `preview-${getRecipientSlug(input.recipient)}`,
     transactionHash: `preview-${input.tokenMint.slice(0, 8)}-${input.amount}`,

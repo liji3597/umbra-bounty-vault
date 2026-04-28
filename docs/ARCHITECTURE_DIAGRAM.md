@@ -7,7 +7,7 @@ Provide a submission-friendly architecture diagram source for `Umbra Bounty Vaul
 This diagram is intentionally scoped to the current implementation:
 
 - product-grade preview flow
-- local wallet preview session
+- real wallet adapter entry with demo-session continuity
 - typed demo Umbra service boundary
 - prepared disclosure and activity narrative surfaces
 
@@ -33,9 +33,9 @@ flowchart TD
     B --> G[Activity\nPrepared lifecycle narrative]
     G --> D
 
-    H[Wallet Provider\nLocal wallet preview session + network state] --> B
-    H -.preview session context.-> C
-    H -.preview session context.-> E
+    H[Wallet Provider\nReal wallet adapter + network state] --> B
+    H -.demo session context.-> C
+    H -.demo session context.-> E
 
     D --> I[Demo Umbra Gateway Layer\nPreview-oriented integration]
 
@@ -52,7 +52,7 @@ Use this reading order when presenting the diagram:
 1. `Landing` frames the problem as privacy-first reward distribution.
 2. `App Shell` holds the route contract across dashboard and app surfaces.
 3. `Create Payout`, `Claim Center`, `Disclosure`, and `Activity` express the main product lifecycle.
-4. `Wallet Provider` supplies the local preview wallet and network state.
+4. `Wallet Provider` supplies the real wallet adapter entry, network state, and demo-session continuity where the current flow uses it.
 5. `Typed Umbra Service Boundary` keeps payout, claim, and disclosure semantics behind app-layer contracts.
 6. `Demo Umbra Gateway Layer` represents the current preview/demo integration boundary.
 
@@ -81,6 +81,6 @@ Avoid saying:
 If asked about implementation scope, say:
 
 - the current repository demonstrates a preview-oriented workflow architecture
-- the wallet layer is a local preview session, not a full live wallet adapter rollout
+- the wallet layer starts from a real wallet adapter path, while demo continuity and prepared states explain the broader lifecycle
 - the service boundary is typed and demo-friendly so the product lifecycle can be shown clearly
 - disclosure and activity remain bounded preview surfaces in the current implementation

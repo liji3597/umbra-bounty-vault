@@ -18,11 +18,11 @@ describe('AppShell', () => {
     expect(screen.getByRole('banner')).toBeInTheDocument();
     expect(screen.getByRole('navigation', { name: 'Primary navigation' })).toBeInTheDocument();
     expect(screen.getByRole('main')).toBeInTheDocument();
-    expect(screen.getByText('The Ledger')).toBeInTheDocument();
-    expect(screen.getByText('Privacy-first reward workflow')).toBeInTheDocument();
+    expect(screen.getByText('Umbra Bounty Vault')).toBeInTheDocument();
+    expect(screen.getByText('Private reward workflow')).toBeInTheDocument();
     expect(screen.getByText('Wallet disconnected')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Connect wallet' })).toBeEnabled();
-    expect(screen.queryByRole('heading', { name: 'Privacy-first reward workflow' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Private reward workflow' })).not.toBeInTheDocument();
     expect(screen.getByText('Shell content')).toBeInTheDocument();
   });
 

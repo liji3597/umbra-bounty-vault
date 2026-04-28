@@ -14,7 +14,31 @@ The interface should visually communicate that this is a reward workflow with tr
 
 ---
 
-## 2. Visual Direction
+## 2. Phase 1 Design Scope
+
+### 2.1 Product Direction
+Phase 1 follows an **A2-leaning** direction: make the claim-oriented payout narrative feel like a credible product workflow first, while deferring a fully live claim mechanism to a later phase.
+
+### 2.2 Scope Boundaries
+Design work for Phase 1 should stay aligned to:
+- **devnet-first** product framing
+- **single-asset** demo scope
+- **claim-oriented** reward lifecycle emphasis
+- **wallet-scoped continuity** across create -> claim -> disclosure -> activity
+
+### 2.3 Interaction Honesty
+Disclosure and Activity should feel **live-aware**, not fully real. The interface should preserve continuity with the active wallet session and payout narrative without implying a full live protocol closure.
+
+### 2.4 What Design Should Not Force
+The visual system should not force product claims that depend on:
+- heavy backend or indexer infrastructure
+- a fully live claim discovery engine
+- fully real disclosure assembly
+- enterprise treasury or audit workflows
+
+---
+
+## 3. Visual Direction
 
 ### Chosen Direction
 **Editorial Privacy Fintech**
@@ -39,7 +63,7 @@ The product should feel like:
 
 ---
 
-## 3. Personality
+## 4. Personality
 
 The visual and interaction personality should be:
 - composed
@@ -57,7 +81,7 @@ Avoid:
 
 ---
 
-## 4. Theme Strategy
+## 5. Theme Strategy
 
 ### Primary Theme
 **Light-first**
@@ -79,7 +103,7 @@ Dark should feel intentional where used, not like a global fallback.
 
 ---
 
-## 5. Color Strategy
+## 6. Color Strategy
 
 ### Palette Behavior
 The palette should support:
@@ -104,7 +128,7 @@ The palette should support:
 
 ---
 
-## 6. Typography
+## 7. Typography
 
 ### Typographic Goal
 Typography should create an editorial product feel with strong hierarchy.
@@ -130,7 +154,7 @@ Avoid flat typography where everything feels the same weight and scale.
 
 ---
 
-## 7. Layout Rhythm
+## 8. Layout Rhythm
 
 ### Layout Direction
 Use a layout rhythm closer to editorial product design than to uniform admin cards.
@@ -148,7 +172,7 @@ Use a layout rhythm closer to editorial product design than to uniform admin car
 
 ---
 
-## 8. Surface Strategy
+## 9. Surface Strategy
 
 The interface should use layered surfaces with distinct roles.
 
@@ -165,7 +189,7 @@ The interface should use layered surfaces with distinct roles.
 
 ---
 
-## 9. Motion and Interaction
+## 10. Motion and Interaction
 
 ### Motion Goal
 Motion should clarify product flow, not distract from it.
@@ -189,9 +213,9 @@ Motion should clarify product flow, not distract from it.
 
 ---
 
-## 10. Page-by-Page Design Notes
+## 11. Page-by-Page Design Notes
 
-## 10.1 Landing
+## 11.1 Landing
 ### Purpose
 Communicate the category immediately: private reward distribution, not generic private payments.
 
@@ -207,7 +231,7 @@ Communicate the category immediately: private reward distribution, not generic p
 
 ---
 
-## 10.2 Dashboard
+## 11.2 Dashboard
 ### Purpose
 Orient the user after wallet connection.
 
@@ -220,7 +244,7 @@ Orient the user after wallet connection.
 
 ---
 
-## 10.3 Create Payout
+## 11.3 Create Payout
 ### Purpose
 Frame payout creation as a careful, structured reward action.
 
@@ -229,10 +253,11 @@ Frame payout creation as a careful, structured reward action.
 - review step should be visually distinct and high-trust
 - sensitive or important fields should receive stronger emphasis surfaces
 - success state should lead naturally into next actions
+- copy should not imply multi-asset or full treasury breadth beyond the current single-asset Phase 1 scope
 
 ---
 
-## 10.4 Claim Center
+## 11.4 Claim Center
 ### Purpose
 Make discovery and claim feel like a purposeful recipient experience.
 
@@ -241,10 +266,11 @@ Make discovery and claim feel like a purposeful recipient experience.
 - found / none / pending / success states should each have distinct presentation
 - recipient should always understand what the system is doing
 - this page should feel different from a wallet inbox or simple transfer list
+- the page should communicate wallet-scoped continuity, not protocol-heavy infrastructure
 
 ---
 
-## 10.5 Disclosure / Verification
+## 11.5 Disclosure / Verification
 ### Purpose
 Express the idea of controlled visibility.
 
@@ -253,60 +279,62 @@ Express the idea of controlled visibility.
 - use layered presentation to reinforce “limited view” semantics
 - verification-ready state should feel formal and intentional
 - avoid turning this into a dry table-only compliance page
+- keep the page live-aware rather than overclaiming a fully real verification backend
 
 ---
 
-## 10.6 Activity
+## 11.6 Activity
 ### Purpose
 Tie isolated actions into a lifecycle narrative.
 
 ### Design Notes
 - timeline or event-sequenced composition works better than a plain log table
-- emphasize causality: payout created -> claim discovered -> claim completed -> disclosure state
+- emphasize causality: payout created -> claim discovered -> claim recorded -> disclosure state
 - this page should help close the demo story
+- language should remain neutral enough for wallet-scoped demo continuity, not imply end-to-end live protocol proof
 
 ---
 
-## 11. Component Inventory
+## 12. Component Inventory
 
-### 11.1 App Shell Components
+### 12.1 App Shell Components
 - app header
 - section navigation
 - wallet status block
 - network status block
 - page intro / section intro modules
 
-### 11.2 Marketing Components
+### 12.2 Marketing Components
 - hero
 - value proposition blocks
 - flow explainer
 - sponsor-fit section
 - CTA section
 
-### 11.3 Payout Components
+### 12.3 Payout Components
 - payout form
 - review card
 - disclosure option selector
 - payout success summary
 
-### 11.4 Claim Components
+### 12.4 Claim Components
 - scanning state module
 - claimable payout card
 - claim action panel
 - empty / none-found state block
 
-### 11.5 Disclosure Components
+### 12.5 Disclosure Components
 - disclosure readiness card
 - verification summary block
 - bounded visibility panel
 - share / export action area if implemented
 
-### 11.6 Activity Components
+### 12.6 Activity Components
 - activity timeline
 - lifecycle event card
 - status badge system
 
-### 11.7 Shared UI Primitives
+### 12.7 Shared UI Primitives
 - buttons
 - inputs
 - badges
@@ -318,15 +346,15 @@ Tie isolated actions into a lifecycle narrative.
 
 ---
 
-## 12. Shared Design Patterns
+## 13. Shared Design Patterns
 
-### 12.1 Hierarchy Through Contrast
+### 13.1 Hierarchy Through Contrast
 Every major page should demonstrate strong hierarchy via scale, spacing, and density differences.
 
-### 12.2 Designed States
+### 13.2 Designed States
 Loading, empty, success, pending, and error states must feel designed, not default placeholders.
 
-### 12.3 Surface Layering
+### 13.3 Surface Layering
 Use different surfaces to distinguish:
 - action
 - review
@@ -334,12 +362,12 @@ Use different surfaces to distinguish:
 - disclosure boundary
 - contextual explanation
 
-### 12.4 Semantic Motion
+### 13.4 Semantic Motion
 Transitions should communicate progression, scanning, readiness, or confirmation.
 
 ---
 
-## 13. Responsive Rules
+## 14. Responsive Rules
 
 The product must remain intentional across:
 - 320
@@ -358,7 +386,7 @@ The product must remain intentional across:
 
 ---
 
-## 14. Accessibility Rules
+## 15. Accessibility Rules
 
 ### Required
 - keyboard-navigable major flows
@@ -372,7 +400,7 @@ Accessibility must feel integrated into the design system rather than added afte
 
 ---
 
-## 15. Stitch Strategy
+## 16. Stitch Strategy
 
 ### Role of Stitch
 Stitch should be used for **prototype acceleration**, not as the final architecture or final design authority.
@@ -393,7 +421,7 @@ The Stitch output should be corrected if it:
 
 ---
 
-## 16. Definition of Good Design for This Project
+## 17. Definition of Good Design for This Project
 
 The design is successful if:
 - it does not look template-generated
@@ -401,3 +429,4 @@ The design is successful if:
 - each major page has a distinct purpose and visual identity
 - the product feels polished enough for hackathon judging
 - the visual system supports the payout -> claim -> disclosure -> activity narrative
+- the interface stays honest about the current Phase 1 real-vs-demo boundary while still feeling product-grade

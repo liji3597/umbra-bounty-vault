@@ -130,8 +130,8 @@ export function DisclosurePage({
         </Badge>
         <h1 className="page-title">Disclosure / Verification</h1>
         <p className="page-description">
-          Review a bounded disclosure package through the typed service boundary before broader
-          verification wiring lands.
+          Review a bounded disclosure package through the typed service boundary. This surface stays
+          coherent with the reward narrative without implying one exact live continuation from the prior step.
         </p>
         <div aria-label="Disclosure meta" className="disclosure-page__badges">
           <Badge>{getDisclosureLabel(activeLevel)}</Badge>
@@ -144,11 +144,11 @@ export function DisclosurePage({
         <Panel
           className="disclosure-page__status"
           heading="Workflow status"
-          description="P5 starts with a real disclosure page shell backed by the existing typed service boundary."
+          description="This disclosure package stays bounded and follows the same typed service boundary used across the reward flow."
         >
           <p>
-            This preview requests a recipient verification view through the typed service boundary
-            while the broader data assembly path is still pending.
+            This view requests a prepared disclosure package through the typed service boundary while
+            staying aligned with the payout and claim narrative.
           </p>
         </Panel>
 
@@ -201,12 +201,12 @@ export function DisclosurePage({
 
             <Panel heading="Next action" role="region" aria-label="Next action">
               <p>Continue into the combined activity narrative or return to Claim Center.</p>
-              <ul>
+              <ul className="app-link-list">
                 <li>
-                  <Link href={ACTIVITY_ROUTE.href}>View activity timeline</Link>
+                  <Link className="app-inline-link" href={ACTIVITY_ROUTE.href}>View activity timeline</Link>
                 </li>
                 <li>
-                  <Link href={CLAIM_ROUTE.href}>Back to claim center</Link>
+                  <Link className="app-inline-link" href={CLAIM_ROUTE.href}>Back to claim center</Link>
                 </li>
               </ul>
             </Panel>

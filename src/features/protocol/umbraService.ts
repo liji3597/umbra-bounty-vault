@@ -1,22 +1,18 @@
 import { z } from 'zod';
 
 import {
+  buildDisclosureViewInputSchema,
   claimPrivatePayoutInputSchema,
   claimPrivatePayoutResultSchema,
   claimablePayoutSchema,
-  scanClaimablePayoutsInputSchema,
-} from '@/features/claim/schema';
-import { buildDisclosureViewInputSchema, disclosureViewSchema } from '@/features/disclosure/schema';
-import {
-  createPayoutFormSchema,
+  createPrivatePayoutFormSchema,
   createPrivatePayoutResultSchema,
+  disclosureViewSchema,
   payoutStatusSchema,
-} from '@/features/payout/schema';
+  scanClaimablePayoutsInputSchema,
+} from './schema';
 
-import {
-  PayoutSubmissionError,
-  classifyPayoutSubmissionError,
-} from './payoutSubmission';
+import { classifyPayoutSubmissionError } from './payoutSubmission';
 import type { UmbraService, UmbraServiceGateway } from './umbraService.types';
 
 function createNotImplementedMethod(methodName: keyof UmbraServiceGateway) {
@@ -28,11 +24,10 @@ function createNotImplementedMethod(methodName: keyof UmbraServiceGateway) {
 export function createUmbraService(gateway: UmbraServiceGateway): UmbraService {
   return {
     async createPrivatePayout(input) {
-      try {
-        const parsedInput = createPayoutFormSchema.parse(input);
-        const result = await gateway.createPrivatePayout(parsedInput);
+      let parsedInput;
 
-        return createPrivatePayoutResultSchema.parse(result);
+      try {
+        parsedInput = createPrivatePayoutFormSchema.parse(input);
       } catch (error: unknown) {
         const classifiedError = classifyPayoutSubmissionError(error);
 
@@ -42,6 +37,22 @@ export function createUmbraService(gateway: UmbraServiceGateway): UmbraService {
 
         throw error;
       }
+
+      let result;
+
+      try {
+        result = await gateway.createPrivatePayout(parsedInput);
+      } catch (error: unknown) {
+        const classifiedError = classifyPayoutSubmissionError(error);
+
+        if (classifiedError) {
+          throw classifiedError;
+        }
+
+        throw error;
+      }
+
+      return createPrivatePayoutResultSchema.parse(result);
     },
     async getPayoutStatus(payoutId) {
       const parsedPayoutId = z.string().trim().min(1).parse(payoutId);

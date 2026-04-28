@@ -104,6 +104,8 @@ describe('ActivityPageContainer', () => {
     });
   });
 
+
+
   it('returns an unclaimed session narrative without fabricating a claim result', async () => {
     render(
       <WalletProvider initialState={{ status: 'connected', network: 'devnet' }}>
@@ -131,6 +133,113 @@ describe('ActivityPageContainer', () => {
     expect(narrative.disclosureView.level).toBe('partial');
   });
 
+  it('rejects a session narrative amount that cannot round-trip through the activity number model', async () => {
+    function InvalidDemoFlowSessionSeeder() {
+      const wallet = useWallet();
+
+      useLayoutEffect(() => {
+        if (wallet.status !== 'connected' || !wallet.isSupportedNetwork || wallet.demoFlowSession) {
+          return;
+        }
+
+        wallet.saveDemoFlowSession({
+          payout: {
+            payoutId: SESSION_PAYOUT_ID,
+            transactionHash: 'session-create-tx',
+            status: 'submitted',
+          },
+          draft: {
+            recipient: 'alice.sol',
+            tokenMint: 'So11111111111111111111111111111111111111112',
+            amount: '1.0000000000000000001',
+            memo: null,
+            disclosureLevel: 'partial',
+          },
+          network: wallet.network === 'mainnet' ? 'mainnet' : 'devnet',
+          connectionVersion: wallet.connectionVersion,
+        });
+      }, [
+        wallet.connectionVersion,
+        wallet.demoFlowSession,
+        wallet.isSupportedNetwork,
+        wallet.network,
+        wallet.saveDemoFlowSession,
+        wallet.status,
+      ]);
+
+      return null;
+    }
+
+    render(
+      <WalletProvider initialState={{ status: 'connected', network: 'devnet' }}>
+        <InvalidDemoFlowSessionSeeder />
+        <ActivityPageContainer />
+      </WalletProvider>,
+    );
+
+    if (!capturedLoadActivityNarrative) {
+      throw new Error('Expected activity narrative loader to be injected.');
+    }
+
+    await expect(capturedLoadActivityNarrative()).rejects.toThrow(
+      'Demo flow payout amount cannot be represented safely in the activity narrative.',
+    );
+  });
+
+
+  it('ignores a stale demo flow session when the wallet session no longer matches', async () => {
+    function StaleDemoFlowSessionSeeder() {
+      const wallet = useWallet();
+
+      useLayoutEffect(() => {
+        if (wallet.status !== 'connected' || !wallet.isSupportedNetwork || wallet.demoFlowSession) {
+          return;
+        }
+
+        wallet.saveDemoFlowSession({
+          payout: {
+            payoutId: SESSION_PAYOUT_ID,
+            transactionHash: 'session-create-tx',
+            status: 'submitted',
+          },
+          draft: {
+            recipient: 'alice.sol',
+            tokenMint: 'So11111111111111111111111111111111111111112',
+            amount: '12.5',
+            memo: null,
+            disclosureLevel: 'partial',
+          },
+          network: 'devnet',
+          connectionVersion: wallet.connectionVersion - 1,
+        });
+      }, [
+        wallet.connectionVersion,
+        wallet.demoFlowSession,
+        wallet.isSupportedNetwork,
+        wallet.saveDemoFlowSession,
+        wallet.status,
+      ]);
+
+      return null;
+    }
+
+    render(
+      <WalletProvider initialState={{ status: 'connected', network: 'devnet' }}>
+        <StaleDemoFlowSessionSeeder />
+        <ActivityPageContainer />
+      </WalletProvider>,
+    );
+
+    if (!capturedLoadActivityNarrative) {
+      throw new Error('Expected activity narrative loader to be injected.');
+    }
+
+    const narrative = await capturedLoadActivityNarrative();
+
+    expect(narrative.payout.payoutId).not.toBe(SESSION_PAYOUT_ID);
+    expect(narrative.disclosureView.level).toBe('verification-ready');
+    expect(narrative.claimResult?.claimStatus).toBe('claimed');
+  });
   it('reuses the in-flight activity narrative load across repeated calls', async () => {
     render(
       <WalletProvider initialState={{ status: 'connected', network: 'devnet' }}>

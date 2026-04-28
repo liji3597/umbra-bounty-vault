@@ -50,19 +50,29 @@ describe('ActivityPage', () => {
     expect(await screen.findByRole('heading', { name: 'Workflow status' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Narrative summary' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Lifecycle timeline' })).toBeInTheDocument();
-    expect(screen.getByText('Preview payout submitted')).toBeInTheDocument();
+    expect(screen.getByText('Payout submitted')).toBeInTheDocument();
     expect(screen.getByText('Claim window opened')).toBeInTheDocument();
-    expect(screen.getByText('Recipient claim completed')).toBeInTheDocument();
+    expect(screen.getByText('Recipient claim recorded')).toBeInTheDocument();
     expect(screen.getByText('Disclosure package ready')).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        'Follow one coherent wallet-scoped narrative across payout submission, claim progress, and bounded disclosure output. When no active demo session exists, this surface falls back to a prepared preview narrative instead of implying a fully live end-to-end replay.',
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        'This page links payout, claim, and disclosure outputs into one stable narrative and stays honest about the current preview fallback when a matching wallet session is unavailable.',
+      ),
+    ).toBeInTheDocument();
 
     const timeline = screen.getByRole('list', { name: 'Lifecycle timeline' });
     const timelineItems = within(timeline).getAllByRole('listitem');
 
     expect(timelineItems).toHaveLength(4);
     expect(timelineItems.map((item) => within(item).getByRole('heading').textContent)).toEqual([
-      'Preview payout submitted',
+      'Payout submitted',
       'Claim window opened',
-      'Recipient claim completed',
+      'Recipient claim recorded',
       'Disclosure package ready',
     ]);
 
@@ -125,7 +135,7 @@ describe('ActivityPage', () => {
     const claimWindowEvent = await screen.findByRole('region', { name: 'Claim window opened' });
 
     expect(
-      within(claimWindowEvent).getByText('No claimable payouts are queued in this preview narrative.'),
+      within(claimWindowEvent).getByText('No claimable payouts are queued in this wallet-scoped narrative.'),
     ).toBeInTheDocument();
   });
 
@@ -147,8 +157,8 @@ describe('ActivityPage', () => {
     expect(screen.queryByText('Ready')).not.toBeInTheDocument();
     expect(screen.queryByRole('region', { name: 'Narrative summary' })).not.toBeInTheDocument();
     expect(screen.queryByRole('list', { name: 'Lifecycle timeline' })).not.toBeInTheDocument();
-    expect(screen.queryByText('Preview payout submitted')).not.toBeInTheDocument();
-    expect(screen.queryByText('Recipient claim completed')).not.toBeInTheDocument();
+    expect(screen.queryByText('Payout submitted')).not.toBeInTheDocument();
+    expect(screen.queryByText('Recipient claim recorded')).not.toBeInTheDocument();
     expect(screen.queryByText('Disclosure package ready')).not.toBeInTheDocument();
   });
 
@@ -170,8 +180,8 @@ describe('ActivityPage', () => {
     expect(screen.queryByText('Ready')).not.toBeInTheDocument();
     expect(screen.queryByRole('region', { name: 'Narrative summary' })).not.toBeInTheDocument();
     expect(screen.queryByRole('list', { name: 'Lifecycle timeline' })).not.toBeInTheDocument();
-    expect(screen.queryByText('Preview payout submitted')).not.toBeInTheDocument();
-    expect(screen.queryByText('Recipient claim completed')).not.toBeInTheDocument();
+    expect(screen.queryByText('Payout submitted')).not.toBeInTheDocument();
+    expect(screen.queryByText('Recipient claim recorded')).not.toBeInTheDocument();
     expect(screen.queryByText('Disclosure package ready')).not.toBeInTheDocument();
   });
 
@@ -185,7 +195,7 @@ describe('ActivityPage', () => {
     );
     expect(screen.queryByRole('status')).not.toBeInTheDocument();
     expect(screen.queryByRole('list', { name: 'Lifecycle timeline' })).not.toBeInTheDocument();
-    expect(screen.queryByText('Preview payout submitted')).not.toBeInTheDocument();
+    expect(screen.queryByText('Payout submitted')).not.toBeInTheDocument();
   });
 
   it('renders empty-state copy when no claimable payouts or disclosure artifacts are present', async () => {
@@ -205,7 +215,7 @@ describe('ActivityPage', () => {
     render(<ActivityPage loadActivityNarrative={loadActivityNarrative} />);
 
     expect(await screen.findByText('Opaque disclosure view')).toBeInTheDocument();
-    expect(screen.getByText('No claimable payouts are queued in this preview narrative.')).toBeInTheDocument();
+    expect(screen.getByText('No claimable payouts are queued in this wallet-scoped narrative.')).toBeInTheDocument();
     expect(screen.getByText('Revealed fields: none')).toBeInTheDocument();
     expect(screen.getByText('Artifacts: none')).toBeInTheDocument();
   });

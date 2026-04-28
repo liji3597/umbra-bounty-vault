@@ -107,9 +107,33 @@ A team needs to show a limited verification view for a reward without turning th
 
 ---
 
-## 8. In Scope
+## 8. Phase 1 Scope Lock
 
-### 8.1 Product Scope
+### 8.1 Scope Direction
+Phase 1 follows an **A2-leaning** direction: make the claim-oriented payout narrative work as a convincing product experience first, while deferring a fully live claim mechanism to a later phase.
+
+### 8.2 Scope Boundaries
+Phase 1 is intentionally constrained to:
+- **devnet-first execution**
+- **single-asset scope**
+- **smallest end-to-end claim narrative**
+- **wallet-scoped continuity across create -> claim -> disclosure -> activity**
+
+### 8.3 Deferred Work
+Phase 1 should explicitly defer:
+- heavy backend / indexer infrastructure as a hard prerequisite
+- a fully live claim discovery mechanism
+- a fully live claim settlement mechanism
+- fully real disclosure and activity data assembly
+
+### 8.4 Honest Capability Standard
+Disclosure and Activity should remain **live-aware**, not fully real, while staying coherent with the same wallet-scoped payout session and avoiding overstatement.
+
+---
+
+## 9. In Scope
+
+### 9.1 Product Scope
 - landing page with clear value proposition
 - wallet-connected app shell
 - create payout flow
@@ -117,7 +141,7 @@ A team needs to show a limited verification view for a reward without turning th
 - disclosure / verification flow
 - activity timeline / lifecycle view
 
-### 8.2 Technical Scope
+### 9.2 Technical Scope
 - Next.js App Router frontend
 - wallet-based integration flow
 - Umbra SDK wrapper layer
@@ -127,7 +151,7 @@ A team needs to show a limited verification view for a reward without turning th
 
 ---
 
-## 9. Out of Scope
+## 10. Out of Scope
 
 - multi-team admin console
 - payroll system features
@@ -137,15 +161,16 @@ A team needs to show a limited verification view for a reward without turning th
 - enterprise-grade audit dashboard
 - multi-chain support
 - fully generalized treasury operations
+- mandatory backend/indexer rollout in Phase 1
 
 ---
 
-## 10. Page Map
+## 11. Page Map
 
-### 10.1 Marketing Surface
+### 11.1 Marketing Surface
 - `Landing`
 
-### 10.2 App Surfaces
+### 11.2 App Surfaces
 - `Dashboard`
 - `Create Payout`
 - `Claim Center`
@@ -154,54 +179,54 @@ A team needs to show a limited verification view for a reward without turning th
 
 ---
 
-## 11. Core User Flows
+## 12. Core User Flows
 
-### 11.1 Create Payout Flow
+### 12.1 Create Payout Flow
 1. User connects wallet
 2. User enters payout details
 3. User reviews privacy-aware reward setup
 4. User submits private payout
 5. User sees success state and next actions
 
-### 11.2 Claim Flow
+### 12.2 Claim Flow
 1. Recipient opens claim center
 2. App checks wallet / network / eligibility state
 3. App scans for claimable payout(s)
 4. Recipient sees found / none / pending states
 5. Recipient executes claim
-6. Claim result updates activity and disclosure views for the same demo session
+6. Claim result updates activity and disclosure views for the same wallet-scoped session
 
-### 11.3 Disclosure Flow
+### 12.3 Disclosure Flow
 1. User enters disclosure / verification view
 2. App shows whether disclosure is unavailable / partial / ready
 3. User can inspect a bounded verification presentation
 4. User may share or review the disclosure artifact depending on final implementation scope
 
-### 11.4 Lifecycle Flow
+### 12.4 Lifecycle Flow
 1. Payout created
 2. Claimable state detected
-3. Claim completed
+3. Claim recorded in the wallet-scoped session
 4. Disclosure state becomes available where applicable
 5. Activity view reflects the lifecycle
 
 ---
 
-## 12. State Matrix
+## 13. State Matrix
 
-### 12.1 Global States
+### 13.1 Global States
 - wallet disconnected
 - wallet connected
 - unsupported network
 - initialization loading
 - initialization error
 
-### 12.2 Dashboard States
+### 13.2 Dashboard States
 - loading
 - empty
 - populated
 - error
 
-### 12.3 Create Payout States
+### 13.3 Create Payout States
 - pristine
 - invalid
 - review
@@ -209,7 +234,7 @@ A team needs to show a limited verification view for a reward without turning th
 - success
 - failure
 
-### 12.4 Claim Center States
+### 13.4 Claim Center States
 - disconnected
 - setup needed
 - scanning
@@ -219,7 +244,7 @@ A team needs to show a limited verification view for a reward without turning th
 - claim success
 - claim failure
 
-### 12.5 Disclosure States
+### 13.5 Disclosure States
 - unavailable
 - no disclosure
 - partial disclosure
@@ -227,7 +252,7 @@ A team needs to show a limited verification view for a reward without turning th
 - share success
 - access limited
 
-### 12.6 Activity States
+### 13.6 Activity States
 - empty
 - timeline available
 - partial data
@@ -235,7 +260,7 @@ A team needs to show a limited verification view for a reward without turning th
 
 ---
 
-## 13. Functional Requirements
+## 14. Functional Requirements
 
 ### FR-1 Wallet and Environment
 - The app must support wallet connection before protected app actions.
@@ -251,15 +276,18 @@ A team needs to show a limited verification view for a reward without turning th
 - The app must support discovery of claimable payouts.
 - The app must clearly distinguish scanning, no-result, and found-result states.
 - The app must provide a recipient claim action when eligible.
+- Phase 1 may satisfy this through wallet-scoped demo continuity rather than a fully live claim backend.
 
 ### FR-4 Disclosure / Verification
 - The app must provide a bounded disclosure experience.
 - The app must support different disclosure readiness states.
 - The app must avoid presenting disclosure as full public audit tooling.
+- Phase 1 disclosure may be live-aware without claiming full live disclosure assembly.
 
 ### FR-5 Activity View
 - The app must present the lifecycle of payout, claim, and disclosure events in a coherent sequence.
-- The app must preserve enough active demo-session context for Activity and Disclosure to narrate the same payout after create and claim actions.
+- The app must preserve enough active wallet-session context for Activity and Disclosure to narrate the same payout after create and claim actions.
+- Phase 1 activity may be live-aware without claiming fully real end-to-end protocol state.
 
 ### FR-6 Typed Interaction Boundaries
 - UI state must be separated from protocol/service logic.
@@ -267,16 +295,16 @@ A team needs to show a limited verification view for a reward without turning th
 
 ---
 
-## 14. Disclosure Information Model
+## 15. Disclosure Information Model
 
 The disclosure model should be framed as **controlled visibility**, not total transparency.
 
-### 14.1 Disclosure Levels
+### 15.1 Disclosure Levels
 - `No disclosure` — nothing intentionally revealed beyond the base product state
 - `Partial disclosure` — limited contextual information for bounded verification
 - `Verification-ready disclosure` — the most complete presentation allowed in the demo scope
 
-### 14.2 Design Constraint
+### 15.2 Design Constraint
 The disclosure surface should communicate:
 - what can be shown
 - what remains private
@@ -286,7 +314,7 @@ It should not imply that the product is a complete audit suite.
 
 ---
 
-## 15. Infrastructure Planning Requirements
+## 16. Infrastructure Planning Requirements
 
 Before implementation, the project must explicitly define app-layer boundaries for:
 - Umbra client creation
@@ -297,7 +325,7 @@ Before implementation, the project must explicitly define app-layer boundaries f
 - prover / MPC dependency points where relevant
 - network handling for devnet / mainnet / localnet
 
-### 15.1 Wrapper Boundary Requirement
+### 16.1 Wrapper Boundary Requirement
 The frontend should not scatter raw low-level SDK calls across pages. The app should prefer wrapper boundaries similar to:
 - `createPrivatePayout(...)`
 - `getPayoutStatus(...)`
@@ -305,9 +333,12 @@ The frontend should not scatter raw low-level SDK calls across pages. The app sh
 - `claimPrivatePayout(...)`
 - `buildDisclosureView(...)`
 
+### 16.2 Phase 1 Planning Constraint
+Indexers, scanners, and other backend-like support layers may be designed as later enhancements, but they should not become mandatory infrastructure that blocks the smallest Phase 1 product-valid claim flow.
+
 ---
 
-## 16. Acceptance Criteria
+## 17. Acceptance Criteria
 
 The product will be considered spec-complete when:
 - a clear landing page communicates the product category and Umbra value
@@ -317,10 +348,11 @@ The product will be considered spec-complete when:
 - the app supports an activity / lifecycle view
 - all four core surfaces contribute to one demo story
 - the project is clearly recognizable as an Umbra-powered reward workflow, not a generic wallet
+- the Phase 1 narrative remains honest about real-vs-demo boundaries
 
 ---
 
-## 17. Demo Narrative Requirements
+## 18. Demo Narrative Requirements
 
 The demo must clearly show:
 1. why private reward distribution matters
@@ -333,7 +365,7 @@ The demo must not depend on protocol-heavy jargon to explain value.
 
 ---
 
-## 18. Success Criteria
+## 19. Success Criteria
 
 ### Product Success
 - judges can understand the use case quickly

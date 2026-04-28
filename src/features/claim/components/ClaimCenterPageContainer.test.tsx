@@ -218,6 +218,63 @@ describe('ClaimCenterPageContainer', () => {
     expect(claimSpy).not.toHaveBeenCalled();
   });
 
+  it('rejects a demo flow payout amount that cannot round-trip through the claim preview number model', async () => {
+    function InvalidDemoFlowSessionSeeder() {
+      const wallet = useWallet();
+
+      useLayoutEffect(() => {
+        if (wallet.status !== 'connected' || !wallet.isSupportedNetwork || wallet.demoFlowSession) {
+          return;
+        }
+
+        wallet.saveDemoFlowSession({
+          payout: {
+            payoutId: DEMO_FLOW_PAYOUT_ID,
+            transactionHash: 'session-create-tx',
+            status: 'submitted',
+          },
+          draft: {
+            recipient: 'alice.sol',
+            tokenMint: 'So11111111111111111111111111111111111111112',
+            amount: '1.0000000000000000001',
+            memo: null,
+            disclosureLevel: 'partial',
+          },
+          network: wallet.network === 'mainnet' ? 'mainnet' : 'devnet',
+          connectionVersion: wallet.connectionVersion,
+        });
+      }, [
+        wallet.connectionVersion,
+        wallet.demoFlowSession,
+        wallet.isSupportedNetwork,
+        wallet.network,
+        wallet.saveDemoFlowSession,
+        wallet.status,
+      ]);
+
+      return null;
+    }
+
+    render(
+      <StrictMode>
+        <WalletProvider initialState={{ status: 'connected', network: 'devnet' }}>
+          <InvalidDemoFlowSessionSeeder />
+          <ClaimCenterPageContainer />
+        </WalletProvider>
+      </StrictMode>,
+    );
+
+    expect(capturedScanClaimablePayouts).toBeDefined();
+
+    if (!capturedScanClaimablePayouts) {
+      throw new Error('Expected demo flow scan handler to be injected.');
+    }
+
+    await expect(capturedScanClaimablePayouts()).rejects.toThrow(
+      'Demo flow payout amount cannot be represented safely in the claim preview.',
+    );
+  });
+
   it('does not inject claim handlers when the wallet network is unsupported', () => {
     render(
       <StrictMode>
@@ -231,7 +288,6 @@ describe('ClaimCenterPageContainer', () => {
     expect(capturedScanClaimablePayouts).toBeUndefined();
     expect(capturedClaimPrivatePayout).toBeUndefined();
   });
-
 
   it('does not inject claim handlers when the wallet is disconnected', () => {
     render(
