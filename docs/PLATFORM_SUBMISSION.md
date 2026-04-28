@@ -9,6 +9,16 @@ Umbra Bounty Vault
 ## One-line Description
 Umbra Bounty Vault is a privacy-first reward workflow for bounties, grants, and contributor rewards.
 
+## At a Glance
+
+| Topic | Summary |
+| --- | --- |
+| Product shape | A user-facing workflow for private payout creation, recipient claim, controlled disclosure, and lifecycle review |
+| Sponsor fit | Umbra is used as privacy infrastructure for reward distribution, not as a generic transfer demo |
+| Current live anchor | `Create Payout` can submit a real devnet SOL transfer through the injected wallet authority |
+| Current boundary | `Claim Center`, `Disclosure`, and `Activity` still rely on wallet-scoped typed demo continuity |
+| Validation posture | Current evidence supports a bounded demo submission, not a full audit-complete delivery |
+
 ## Project Overview
 Contributor rewards are usually distributed through fully visible transfer flows. That makes recipient relationships, reward timing, and payout patterns easy to trace.
 
@@ -44,7 +54,7 @@ Umbra is used here as the privacy-oriented foundation for:
 - Claim Center flow for recipient discovery and linked claim states
 - Disclosure / Verification view for controlled disclosure
 - Activity narrative view for lifecycle closure
-- local wallet demo session with typed demo service boundary
+- real wallet adapter entry with wallet-scoped demo-session continuity
 
 ## Tech Stack
 - Next.js App Router
@@ -58,19 +68,46 @@ Umbra is used here as the privacy-oriented foundation for:
 - pnpm
 
 ## Current Scope Note
-This repository currently demonstrates the workflow through a linked demo session rather than a production deployment.
+This repository currently demonstrates the workflow through a linked demo session with a real wallet adapter entry.
 
 The current implementation includes:
-- a local wallet demo session
+- a real wallet adapter entry with wallet-scoped demo-session continuity
 - a typed demo Umbra service boundary
+- a live devnet anchor in `Create Payout`
 - linked disclosure and activity surfaces for lifecycle explanation
 - browser-manual validation of the main demo path
+- one focused Playwright golden-path spec for the linked demo path
+
+Current implementation boundary:
+- real devnet support is anchored in `Create Payout`
+- the live devnet gateway currently supports `createPrivatePayout` only
+- `Claim Center`, `Disclosure`, and `Activity` rely on wallet-scoped typed demo continuity or prepared states rather than a full live backend or indexer stack
+- the current live path supports direct SOL transfer semantics with optional memo and `disclosureLevel: 'none'`
 
 It should not be described as:
 - a finished production treasury system
 - a full live Umbra protocol integration
+- a fully implemented end-to-end devnet claim/disclosure/activity flow
 - protocol behavior proven beyond the current demo boundary
-- automated E2E already fully green
+- exhaustive automated E2E coverage across failure paths or future workflow extensions
+
+## Validation Evidence Note
+Current evidence for the repository is strong enough to support a bounded demo submission, but it is not yet a full P7 audit artifact set.
+
+Current evidence available in-repo:
+- browser-manual validation of the main demo path
+- one focused Playwright golden-path spec for the linked demo path
+- typed service-boundary tests and feature-level Vitest coverage
+- WSL validation notes captured in `docs/WSL_CLAUDE_CODE_VALIDATION.md`
+
+Evidence still missing as committed artifacts:
+- a dedicated responsive screenshot pack across target breakpoints (the checklist now lives in `docs/P7_RESPONSIVE_EVIDENCE_CHECKLIST.md`)
+- a standalone accessibility report or issue ledger checked into the repo
+- a committed Lighthouse or key-page performance report
+
+Reviewer-safe framing:
+- the project is submission-ready as a demo workflow with a minimal live devnet anchor
+- the current validation evidence is targeted and honest, not exhaustive across every failure path or quality dimension
 
 ## Demo Flow
 1. Landing
@@ -86,3 +123,4 @@ It should not be described as:
 - stronger shared-context continuity across the workflow
 - organization-facing treasury workflows
 - a more complete recipient reward inbox
+
