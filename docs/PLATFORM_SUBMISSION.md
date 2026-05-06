@@ -76,7 +76,7 @@ The current implementation includes:
 - SDK-backed `scanClaimablePayouts` and `claimPrivatePayout` when signer/indexer/relayer dependencies are available
 - bounded disclosure and activity surfaces derived from wallet-scoped provider truth
 - browser-manual validation of the main demo path
-- one focused Playwright golden-path spec for the linked demo path
+- five Playwright specs for the linked demo path: one golden path plus four bounded failure-path checks
 
 Current implementation boundary:
 - create / scan / claim are wired around official Umbra SDK flows, but remain bounded to a devnet-first, single-asset, happy-path-oriented scope
@@ -96,7 +96,7 @@ Current evidence for the repository is strong enough to support a bounded demo s
 
 Current evidence available in-repo:
 - browser-manual validation of the main demo path
-- one focused Playwright golden-path spec for the linked demo path
+- five Playwright specs for the linked demo path: one golden path plus four bounded failure-path checks
 - typed service-boundary tests and feature-level Vitest coverage
 - WSL validation notes captured in `docs/WSL_CLAUDE_CODE_VALIDATION.md`
 

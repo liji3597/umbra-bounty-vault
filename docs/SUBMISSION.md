@@ -183,7 +183,7 @@ Current implementation boundary:
 - disclosure 与 activity 当前是 wallet-scoped、live-aware 的 app-level summary，而不是完整 live backend、protocol disclosure service 或 replayable audit log
 - 项目应被表述为 demo-ready workflow with bounded live capabilities，而不是 production-complete live treasury environment
 
-Current QA note: browser validation, targeted tests, and the repository's focused Playwright golden-path spec cover the closeout path. That still should not be described as exhaustive automated E2E coverage across every failure path or future workflow extension.
+Current QA note: browser validation, targeted tests, and the repository's five Playwright specs (one golden path plus four bounded failure-path checks) cover the closeout path. That still should not be described as exhaustive automated E2E coverage across every failure path or future workflow extension.
 
 ---
 
