@@ -9,17 +9,24 @@ import type { ClaimPrivatePayoutResult, ClaimablePayout } from '@/features/claim
 import type { DisclosureView } from '@/features/disclosure/schema';
 import type { CreatePrivatePayoutResult } from '@/features/payout/schema';
 
+export type ActivityTruthSource =
+  | 'prepared-preview'
+  | 'demo-derived'
+  | 'live-derived'
+  | 'live-backed';
+
 export interface ActivityNarrative {
   payout: CreatePrivatePayoutResult;
   claimablePayouts: ClaimablePayout[];
   claimResult: ClaimPrivatePayoutResult | null;
   disclosureView: DisclosureView;
+  truthSource: ActivityTruthSource;
 }
 
 export type LoadActivityNarrative = () => Promise<ActivityNarrative>;
 
 interface ActivityPageProps {
-  loadActivityNarrative: LoadActivityNarrative;
+  loadActivityNarrative?: LoadActivityNarrative | null;
 }
 
 type ActivityPagePhase = 'loading' | 'success' | 'error';
@@ -33,6 +40,7 @@ interface ActivityTimelineItem {
 const ACTIVITY_LOAD_ERROR_MESSAGE = 'Activity narrative could not be loaded.';
 const ACTIVITY_INTEGRITY_ERROR_MESSAGE =
   'Activity narrative is inconsistent across payout, claim, and disclosure steps.';
+const ACTIVITY_UNAVAILABLE_ERROR_MESSAGE = 'Activity narrative is currently unavailable.';
 const CREATE_PAYOUT_ROUTE = getAppRoute('/app/payouts/new');
 
 function getPhaseLabel(phase: ActivityPagePhase): string {
@@ -44,6 +52,34 @@ function getPhaseLabel(phase: ActivityPagePhase): string {
     case 'loading':
     default:
       return 'Loading';
+  }
+}
+
+function getActivityTruthSourceLabel(truthSource: ActivityTruthSource): string {
+  switch (truthSource) {
+    case 'demo-derived':
+      return 'Demo-derived';
+    case 'live-backed':
+      return 'Live-backed';
+    case 'live-derived':
+      return 'Live-derived';
+    case 'prepared-preview':
+    default:
+      return 'Prepared preview';
+  }
+}
+
+function getActivityTruthSourceSummary(truthSource: ActivityTruthSource): string {
+  switch (truthSource) {
+    case 'demo-derived':
+      return 'This narrative is derived from the active demo continuity session and only uses provider truth when it reinforces the same wallet-scoped storyline.';
+    case 'live-backed':
+      return 'This narrative is backed directly by provider truth across payout, claim, and disclosure steps for the active wallet session.';
+    case 'live-derived':
+      return 'This narrative is derived from wallet-scoped provider truth and fills the remaining gaps with bounded app-level summaries.';
+    case 'prepared-preview':
+    default:
+      return 'This narrative is a prepared preview and is not backed by a connected wallet-scoped truth context.';
   }
 }
 
@@ -138,6 +174,13 @@ export function ActivityPage({ loadActivityNarrative }: ActivityPageProps) {
       setPhase('loading');
       setErrorMessage(null);
 
+      if (!loadActivityNarrative) {
+        setNarrative(null);
+        setErrorMessage(ACTIVITY_UNAVAILABLE_ERROR_MESSAGE);
+        setPhase('error');
+        return;
+      }
+
       try {
         const nextNarrative = await loadActivityNarrative();
 
@@ -185,11 +228,13 @@ export function ActivityPage({ loadActivityNarrative }: ActivityPageProps) {
         <h1 className="page-title">Activity</h1>
         <p className="page-description">
           Follow one coherent wallet-scoped narrative across payout submission, claim progress, and
-          bounded disclosure output. When no active demo session exists, this surface falls back to a
-          prepared preview narrative instead of implying a fully live end-to-end replay.
+          bounded disclosure output. Disconnected and unsupported wallet states can still use a
+          prepared preview narrative, while connected supported sessions stay within truth-backed
+          activity context.
         </p>
         <div aria-label="Activity meta" className="disclosure-page__badges">
           <Badge>Cross-flow narrative</Badge>
+          {narrative ? <Badge>{getActivityTruthSourceLabel(narrative.truthSource)}</Badge> : null}
           <Badge>{getPhaseLabel(phase)}</Badge>
         </div>
       </Panel>
@@ -204,8 +249,9 @@ export function ActivityPage({ loadActivityNarrative }: ActivityPageProps) {
             description="This page assembles payout, claim, and disclosure state through the existing typed service boundary."
           >
             <p>
-              This page links payout, claim, and disclosure outputs into one stable narrative and
-              stays honest about the current preview fallback when a matching wallet session is unavailable.
+              {narrative
+                ? getActivityTruthSourceSummary(narrative.truthSource)
+                : 'This page links payout, claim, and disclosure outputs into one stable narrative and only falls back to preview mode when the wallet is disconnected or on an unsupported network.'}
             </p>
           </Panel>
         </section>
@@ -229,6 +275,7 @@ export function ActivityPage({ loadActivityNarrative }: ActivityPageProps) {
                 Narrative summary
               </h2>
               <Panel role="region" aria-labelledby="activity-narrative-summary-title">
+                <p>Narrative source: {getActivityTruthSourceLabel(narrative.truthSource)}</p>
                 <p>Payout status: {narrative.payout.status}</p>
                 <p>Claim status: {narrative.claimResult?.claimStatus ?? 'claimable'}</p>
                 <p>Disclosure level: {narrative.disclosureView.level}</p>

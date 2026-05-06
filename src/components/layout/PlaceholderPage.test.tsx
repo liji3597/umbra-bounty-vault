@@ -34,6 +34,12 @@ describe('PlaceholderPage', () => {
     expect(screen.getByText('Create one payout first to activate the linked recipient walkthrough.')).toBeInTheDocument();
     expect(screen.getByText('Disclosure queue is empty')).toBeInTheDocument();
     expect(screen.getByText('Connected recipients can scan for a linked claim once a payout has been created.')).toBeInTheDocument();
+    expect(screen.getAllByText('Disclosure needs linked payout')).toHaveLength(2);
+    expect(screen.getByText('Disclosure unlocks after linked payout')).toBeInTheDocument();
+    expect(screen.getByText('Activity needs linked claim')).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Review disclosure' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Open disclosure workspace' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Review activity' })).not.toBeInTheDocument();
   });
 
   it('renders wallet-scoped session state after a payout session is saved', () => {
@@ -79,11 +85,16 @@ describe('PlaceholderPage', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Seed session' }));
 
     expect(screen.getByRole('link', { name: 'Continue to claim center' })).toHaveAttribute('href', '/app/claim');
+    expect(screen.getByRole('link', { name: 'Review disclosure' })).toHaveAttribute('href', '/app/disclosure');
+    expect(screen.queryByRole('link', { name: 'Review activity' })).not.toBeInTheDocument();
+    expect(screen.getByText('Activity needs linked claim')).toBeInTheDocument();
     expect(screen.getByText('Continue the linked claim walkthrough')).toBeInTheDocument();
     expect(screen.getByText('Claimable payout in current session')).toBeInTheDocument();
     expect(screen.getByText('One linked recipient walkthrough is enough to tell the Phase 1 demo story.')).toBeInTheDocument();
     expect(screen.getByText('Bounty completion proof')).toBeInTheDocument();
     expect(screen.getByText('Partial disclosure • prepared for linked review')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Review disclosure' })).toHaveAttribute('href', '/app/disclosure');
+    expect(screen.getByText('Open bounty completion proof').closest('a')).toHaveAttribute('href', '/app/disclosure');
     expect(screen.getByText('Payout session is active')).toBeInTheDocument();
     expect(screen.getByText('Claim remains available')).toBeInTheDocument();
   });

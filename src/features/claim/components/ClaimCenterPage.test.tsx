@@ -5,6 +5,10 @@ import {
   type ClaimPrivatePayoutResult,
   type ClaimablePayout,
 } from '@/features/claim/schema';
+import {
+  UMBRA_SDK_CLAIM_UNAVAILABLE_MESSAGE,
+  UMBRA_SDK_SCANNER_UNAVAILABLE_MESSAGE,
+} from '@/features/protocol/umbraSdkClient';
 import { type WalletProviderState, WalletProvider, useWallet } from '@/providers/WalletProvider';
 
 import {
@@ -26,10 +30,12 @@ function WalletTestControls() {
 function renderClaimCenterPage({
   scanClaimablePayouts,
   claimPrivatePayout,
+  hasLifecycleReviewContext,
   initialState,
 }: {
   scanClaimablePayouts?: ScanClaimablePayouts;
   claimPrivatePayout?: ClaimPrivatePayout;
+  hasLifecycleReviewContext?: boolean;
   initialState?: Partial<WalletProviderState>;
 } = {}) {
   return render(
@@ -38,6 +44,7 @@ function renderClaimCenterPage({
       <ClaimCenterPage
         scanClaimablePayouts={scanClaimablePayouts}
         claimPrivatePayout={claimPrivatePayout}
+        hasLifecycleReviewContext={hasLifecycleReviewContext}
       />
     </WalletProvider>,
   );
@@ -181,6 +188,19 @@ describe('ClaimCenterPage', () => {
     expect(screen.getByRole('button', { name: 'Claim' })).toBeEnabled();
   });
 
+  it('shows an explicit unavailable message when live scan infrastructure is not configured', async () => {
+    const scanClaimablePayouts = vi.fn().mockRejectedValue(new Error(UMBRA_SDK_SCANNER_UNAVAILABLE_MESSAGE));
+
+    renderClaimCenterPage({ scanClaimablePayouts });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Scan claimable payouts' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Live claim scanning is unavailable in the current environment.',
+    );
+    expect(screen.getByText('Confirm the wallet stays connected, then scan again.')).toBeInTheDocument();
+  });
+
   it('blocks duplicate scans while a scan is already in flight', async () => {
     const deferred = createDeferredScan();
     const scanClaimablePayouts = vi.fn(() => deferred.promise);
@@ -208,7 +228,33 @@ describe('ClaimCenterPage', () => {
     expect(await screen.findByText('Claimable payouts found')).toBeInTheDocument();
   });
 
-  it('shows claim progress and marks the payout claimed after a successful claim', async () => {
+
+  it('shows an explicit unavailable message when live claim infrastructure is not configured', async () => {
+    const scanClaimablePayouts = vi.fn().mockResolvedValue([
+      {
+        payoutId: 'payout-1',
+        senderLabel: 'Umbra Labs',
+        tokenSymbol: 'SOL',
+        amount: 5,
+        claimStatus: 'claimable',
+      },
+    ]);
+    const claimPrivatePayout = vi.fn().mockRejectedValue(new Error(UMBRA_SDK_CLAIM_UNAVAILABLE_MESSAGE));
+
+    renderClaimCenterPage({ scanClaimablePayouts, claimPrivatePayout });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Scan claimable payouts' }));
+    expect(await screen.findByText('Claimable payouts found')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Claim' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Live payout claiming is unavailable in the current environment.',
+    );
+    expect(screen.getByText('If the issue persists, rescan the current wallet session before retrying the claim.')).toBeInTheDocument();
+  });
+
+  it('does not suggest disclosure or activity review after a live-only claim success', async () => {
     const scanClaimablePayouts = vi.fn().mockResolvedValue([
       {
         payoutId: 'payout-1',
@@ -228,9 +274,40 @@ describe('ClaimCenterPage', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Claim' }));
 
-    expect(claimPrivatePayout).toHaveBeenCalledWith('payout-1');
-    expect(screen.getByRole('button', { name: 'Claiming payout' })).toBeDisabled();
-    expect(screen.getByText('Submitting claim for the current session.')).toBeInTheDocument();
+    deferred.resolve({
+      payoutId: 'payout-1',
+      claimStatus: 'claimed',
+      transactionHash: 'claim-tx-1',
+    });
+
+    expect(await screen.findByRole('button', { name: 'Claimed' })).toBeDisabled();
+    expect(screen.getByText('Claim completed for the current session. Reference: claim-tx-1.')).toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: 'Next action' })).not.toBeInTheDocument();
+  });
+
+  it('shows disclosure and activity review links after a continuity-backed claim success', async () => {
+    const scanClaimablePayouts = vi.fn().mockResolvedValue([
+      {
+        payoutId: 'payout-1',
+        senderLabel: 'Umbra Labs',
+        tokenSymbol: 'SOL',
+        amount: 5,
+        claimStatus: 'claimable',
+      },
+    ]);
+    const deferred = createDeferredClaim();
+    const claimPrivatePayout = vi.fn(() => deferred.promise);
+
+    renderClaimCenterPage({
+      scanClaimablePayouts,
+      claimPrivatePayout,
+      hasLifecycleReviewContext: true,
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Scan claimable payouts' }));
+    expect(await screen.findByText('Claimable payouts found')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Claim' }));
 
     deferred.resolve({
       payoutId: 'payout-1',

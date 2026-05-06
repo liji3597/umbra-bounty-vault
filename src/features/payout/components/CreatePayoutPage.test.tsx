@@ -16,13 +16,25 @@ function WalletTestControls() {
 }
 
 function renderCreatePayoutPage(
-  submitCreatePayout?: SubmitCreatePayout,
+  submitCreatePayout?: SubmitCreatePayout | null,
   initialState?: Partial<WalletProviderState>,
+  submitUnavailableMessage?: string,
+  onReviewValuesChange?: (values: {
+    recipient: string;
+    tokenMint: string;
+    amount: string;
+    memo: string | null;
+    disclosureLevel: 'none' | 'partial' | 'verification-ready';
+  }) => Promise<string | undefined>,
 ) {
   return render(
     <WalletProvider initialState={{ status: 'connected', network: 'devnet', ...initialState }}>
       <WalletTestControls />
-      <CreatePayoutPage submitCreatePayout={submitCreatePayout} />
+      <CreatePayoutPage
+        submitCreatePayout={submitCreatePayout}
+        submitUnavailableMessage={submitUnavailableMessage}
+        onReviewValuesChange={onReviewValuesChange}
+      />
     </WalletProvider>,
   );
 }
@@ -156,6 +168,54 @@ describe('CreatePayoutPage', () => {
     expect(screen.getByText('Verification-ready')).toBeInTheDocument();
   });
 
+  it('shows the registration gate message in review when live create is unavailable', () => {
+    renderCreatePayoutPage(
+      null,
+      { network: 'devnet' },
+      'Recipient registration must be verified through the official Umbra SDK before live payout creation is available.',
+    );
+
+    fillValidDraft();
+    fireEvent.click(screen.getByRole('button', { name: 'Review payout' }));
+
+    expect(screen.getByText('Review the normalized payout details before the final action.')).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        'Recipient registration must be verified through the official Umbra SDK before live payout creation is available.',
+      ),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Create payout' })).toBeDisabled();
+  });
+
+  it('replaces the review gate message when recipient registration resolves as unregistered', async () => {
+    const onReviewValuesChange = vi.fn().mockResolvedValue(
+      'Recipient is not registered for the current official Umbra SDK payout path yet. Ask the recipient to complete registration before retrying.',
+    );
+
+    renderCreatePayoutPage(
+      null,
+      { network: 'devnet' },
+      'Recipient registration is verified, but official Umbra SDK payout creation is not wired for this wallet session yet.',
+      onReviewValuesChange,
+    );
+
+    fillValidDraft();
+    fireEvent.click(screen.getByRole('button', { name: 'Review payout' }));
+
+    expect(
+      await screen.findByText(
+        'Recipient is not registered for the current official Umbra SDK payout path yet. Ask the recipient to complete registration before retrying.',
+      ),
+    ).toBeInTheDocument();
+    expect(onReviewValuesChange).toHaveBeenCalledWith({
+      recipient: 'alice.sol',
+      tokenMint: 'So11111111111111111111111111111111111111112',
+      amount: '12.5',
+      memo: null,
+      disclosureLevel: 'partial',
+    });
+  });
+
   it('enters submitting state and sends normalized values to the injected submit function', async () => {
     const deferred = createDeferredSubmit();
     const submitCreatePayout = vi.fn(() => deferred.promise);
@@ -214,7 +274,6 @@ describe('CreatePayoutPage', () => {
     expect(within(shareSafeSummary as HTMLElement).getByText('submitted')).toBeInTheDocument();
   });
 
-
   it('uses the connected wallet network in claim guidance after submit success', async () => {
     const submitCreatePayout = vi.fn().mockResolvedValue({
       payoutId: 'payout-1',
@@ -232,6 +291,16 @@ describe('CreatePayoutPage', () => {
     expect(
       screen.getByText('Recipient claims from Claim Center using a supported wallet on Solana Mainnet.'),
     ).toBeInTheDocument();
+  });
+
+  it('disables final submit when a supported wallet session lacks create capability', () => {
+    renderCreatePayoutPage(null, { network: 'mainnet' });
+
+    fillValidDraft();
+    fireEvent.click(screen.getByRole('button', { name: 'Review payout' }));
+
+    expect(screen.getByText('Review the normalized payout details before the final action.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Create payout' })).toBeDisabled();
   });
 
   it('keeps the default disclosure level when the selected value is invalid', () => {
@@ -341,5 +410,70 @@ describe('CreatePayoutPage', () => {
         screen.getByText('Review the normalized payout details before the final action.'),
       ).toBeInTheDocument();
     });
+  });
+
+  it('ignores stale review gate results when a newer review finishes later', async () => {
+    let resolveFirst!: (value: string | undefined) => void;
+    let resolveSecond!: (value: string | undefined) => void;
+    const onReviewValuesChange = vi
+      .fn<
+        (values: {
+          recipient: string;
+          tokenMint: string;
+          amount: string;
+          memo: string | null;
+          disclosureLevel: 'none' | 'partial' | 'verification-ready';
+        }) => Promise<string | undefined>
+      >()
+      .mockImplementationOnce(
+        () =>
+          new Promise((resolve) => {
+            resolveFirst = resolve;
+          }),
+      )
+      .mockImplementationOnce(
+        () =>
+          new Promise((resolve) => {
+            resolveSecond = resolve;
+          }),
+      );
+
+    renderCreatePayoutPage(
+      null,
+      { network: 'devnet' },
+      'Recipient registration is verified, but official Umbra SDK payout creation is not wired for this wallet session yet.',
+      onReviewValuesChange,
+    );
+
+    fillValidDraft();
+    fireEvent.click(screen.getByRole('button', { name: 'Review payout' }));
+
+    fireEvent.change(screen.getByLabelText('Recipient'), {
+      target: { value: '11111111111111111111111111111111' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Review payout' }));
+
+    resolveSecond(
+      'Recipient is not registered for the current official Umbra SDK payout path yet. Ask the recipient to complete registration before retrying.',
+    );
+    expect(
+      await screen.findByText(
+        'Recipient is not registered for the current official Umbra SDK payout path yet. Ask the recipient to complete registration before retrying.',
+      ),
+    ).toBeInTheDocument();
+    expect(screen.getByText('11111111111111111111111111111111')).toBeInTheDocument();
+
+    resolveFirst(
+      'Recipient registration could not be verified for this wallet session yet. Retry after the official Umbra SDK registration query is available.',
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('11111111111111111111111111111111')).toBeInTheDocument();
+    });
+    expect(
+      screen.queryByText(
+        'Recipient registration could not be verified for this wallet session yet. Retry after the official Umbra SDK registration query is available.',
+      ),
+    ).not.toBeInTheDocument();
   });
 });

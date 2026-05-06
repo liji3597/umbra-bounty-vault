@@ -29,6 +29,8 @@ Design work for Phase 1 should stay aligned to:
 ### 2.3 Interaction Honesty
 Disclosure and Activity should feel **live-aware**, not fully real. The interface should preserve continuity with the active wallet session and payout narrative without implying a full live protocol closure.
 
+When live truth, registration readiness, or claim infrastructure is unavailable, the UI should show an explicit gated or unavailable state instead of silently falling back or implying success.
+
 ### 2.4 What Design Should Not Force
 The visual system should not force product claims that depend on:
 - heavy backend or indexer infrastructure
@@ -254,6 +256,7 @@ Frame payout creation as a careful, structured reward action.
 - sensitive or important fields should receive stronger emphasis surfaces
 - success state should lead naturally into next actions
 - copy should not imply multi-asset or full treasury breadth beyond the current single-asset Phase 1 scope
+- when recipient registration or live create capability is unavailable, the review state should block the final action explicitly rather than preserving a false sense of submit readiness
 
 ---
 
@@ -267,6 +270,7 @@ Make discovery and claim feel like a purposeful recipient experience.
 - recipient should always understand what the system is doing
 - this page should feel different from a wallet inbox or simple transfer list
 - the page should communicate wallet-scoped continuity, not protocol-heavy infrastructure
+- scanner-unavailable and claim-unavailable conditions should appear as designed explicit states, not as generic crashes or ambiguous fallback messaging
 
 ---
 
@@ -280,6 +284,7 @@ Express the idea of controlled visibility.
 - verification-ready state should feel formal and intentional
 - avoid turning this into a dry table-only compliance page
 - keep the page live-aware rather than overclaiming a fully real verification backend
+- if no wallet-scoped truth-backed context exists, the page should move into an explicit unavailable state instead of implying a live disclosure continuation
 
 ---
 
@@ -292,6 +297,7 @@ Tie isolated actions into a lifecycle narrative.
 - emphasize causality: payout created -> claim discovered -> claim recorded -> disclosure state
 - this page should help close the demo story
 - language should remain neutral enough for wallet-scoped demo continuity, not imply end-to-end live protocol proof
+- when the connected supported wallet has no truth-backed activity context, the page should present an explicit unavailable state rather than fabricating lifecycle closure
 
 ---
 

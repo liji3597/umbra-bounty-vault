@@ -27,9 +27,9 @@
 | --- | --- |
 | What this is | A user-facing reward distribution workflow: create payout -> claim -> disclosure -> activity |
 | Why Umbra | The core requirement is not just sending funds, but making reward distribution private, claimable, and selectively revealable |
-| What works today | Real wallet adapter entry, typed demo service boundary, and a live devnet anchor in `Create Payout` |
-| Current boundary | `Claim Center`, `Disclosure`, and `Activity` remain demo-backed even when the wallet session is real |
-| Validation status | Typecheck, Vitest, and one Playwright golden-path spec are committed evidence; responsive/a11y/perf artifacts are still partial |
+| What works today | Real wallet adapter entry, an Umbra SDK-centered typed service boundary, and SDK-backed create -> scan -> claim flows for supported wallet sessions |
+| Current boundary | `Disclosure` and `Activity` are bounded live-aware summaries derived from wallet-scoped truth, not full protocol audit artifacts |
+| Validation status | Typecheck, Vitest, and five Playwright specs (one golden path + four bounded failure paths) are committed evidence; responsive/a11y/perf artifacts are still partial |
 
 ## Table of Contents
 
@@ -101,7 +101,7 @@ pnpm test:run
 pnpm test:e2e
 ```
 
-Note: `pnpm test:e2e` currently covers the repository's single Playwright golden-path spec for the linked demo session. Treat that as focused golden-path coverage, not as exhaustive end-to-end validation of every failure path or future workflow extension.
+Note: `pnpm test:e2e` currently covers five repository Playwright specs: one linked-demo-session golden path plus four bounded failure-path checks. Treat that as focused workflow coverage, not as exhaustive end-to-end validation of every failure path or future workflow extension.
 
 ## Demo Flow
 
@@ -114,7 +114,7 @@ Current page contract:
 - `Disclosure / Verification` — `/app/disclosure`
 - `Activity` — `/app/activity`
 
-Current demo narrative centers on this linked wallet-scoped path:
+Current demo narrative centers on this wallet-scoped claim-oriented path:
 
 1. enter landing
 2. connect the wallet demo session
@@ -123,33 +123,34 @@ Current demo narrative centers on this linked wallet-scoped path:
 5. review the matching disclosure context
 6. review lifecycle closure in activity
 
-This should be described as demo-session continuity built on a typed service boundary, not as a production-complete live treasury workflow.
+This should be described as an SDK-backed create -> scan -> claim workflow with bounded wallet-scoped disclosure/activity summaries, not as a production-complete live treasury workflow.
 
 ## Current Scope
 
-This repository currently demonstrates the workflow through a real wallet adapter entry plus a typed demo Umbra service boundary.
+This repository currently demonstrates the workflow through a real wallet adapter entry plus an Umbra SDK-centered typed service boundary.
 
 What is implemented today:
 
-- a real wallet adapter entry with wallet-scoped demo-session continuity
-- a typed demo Umbra service boundary
-- a live devnet anchor in `Create Payout`
-- linked disclosure and activity surfaces for lifecycle explanation
-- focused automated coverage for the current golden path
+- a real wallet adapter entry with wallet-scoped session identity
+- SDK-backed `createPrivatePayout` for supported wallet sessions
+- SDK-backed `scanClaimablePayouts` and `claimPrivatePayout` when signer/indexer/relayer dependencies are available
+- bounded wallet-scoped disclosure summaries derived from provider truth
+- activity narratives that stay explicit about `prepared-preview`, `demo-derived`, and `live-derived` truth boundaries
+- focused automated coverage for the current golden path plus explicit bounded failure-path states
 
 Current implementation boundary:
 
-- real devnet support is anchored in `Create Payout`
-- the live devnet gateway currently supports `createPrivatePayout` only
-- `Claim Center`, `Disclosure`, and `Activity` remain demo-backed, even when the wallet session is real
-- the current live path supports direct SOL transfer semantics with optional memo and `disclosureLevel: 'none'`
+- create / scan / claim are wired around official Umbra SDK flows, but remain bounded to a devnet-first, single-asset, happy-path-oriented scope
+- disclosure is an app-level wallet-scoped summary derived from provider truth, not a full protocol disclosure artifact
+- activity is a wallet-scoped lifecycle narrative, not a replayable protocol audit log
+- when no matching wallet-scoped truth context exists, disclosure/activity fall back to preview or explicit unavailable states rather than fabricating live success
 
 It should not be described as:
 
 - a finished production treasury system
-- a full live Umbra protocol integration
+- a production-complete live Umbra treasury integration
 - a compliance or audit platform
-- protocol behavior proven beyond the current demo boundary
+- protocol behavior proven beyond the current bounded devnet-first workflow
 
 ## Validation Evidence
 
@@ -158,7 +159,7 @@ The current repository has evidence for the demo workflow boundary, but it does 
 | Area | Current evidence | Status |
 | --- | --- | --- |
 | Lint / type safety / focused unit tests | `pnpm lint`, `pnpm typecheck`, `pnpm test:run` are the primary local verification commands | Available |
-| Playwright golden path | `pnpm test:e2e` covers the repository's single linked-demo-session golden-path spec | Available but narrow |
+| Playwright coverage | `pnpm test:e2e` covers five repository specs: one linked-demo-session golden path plus four bounded failure-path checks | Available but still bounded |
 | Browser manual validation | Main demo path is documented in project materials as manually validated for create -> claim -> disclosure -> activity continuity | Documented |
 | Responsive evidence | `docs/P7_RESPONSIVE_EVIDENCE_CHECKLIST.md` defines the required surfaces, breakpoints, and acceptance checks, but a committed screenshot pack is not yet present in the repository | Checklist available; screenshot artifacts missing |
 | Accessibility evidence | `docs/TASKS.md` records one round of fixes/revalidation, but no standalone committed a11y report is currently present | Partial |

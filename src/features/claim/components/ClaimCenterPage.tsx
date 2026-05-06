@@ -8,6 +8,7 @@ import {
   type ClaimPrivatePayoutResult,
   type ClaimablePayout,
 } from '@/features/claim/schema';
+import { UMBRA_SDK_CLAIM_UNAVAILABLE_MESSAGE, UMBRA_SDK_SCANNER_UNAVAILABLE_MESSAGE } from '@/features/protocol/umbraSdkClient';
 import { getAppRoute } from '@/lib/routes';
 import { useWallet } from '@/providers/WalletProvider';
 
@@ -18,6 +19,7 @@ interface ClaimCenterPageProps {
   walletLabel?: string;
   scanClaimablePayouts?: ScanClaimablePayouts;
   claimPrivatePayout?: ClaimPrivatePayout;
+  hasLifecycleReviewContext?: boolean;
 }
 
 type ClaimCenterPhase = 'idle' | 'scanning' | 'found' | 'empty' | 'error';
@@ -25,7 +27,11 @@ type ClaimCenterPhase = 'idle' | 'scanning' | 'found' | 'empty' | 'error';
 type ClaimStatus = ClaimablePayout['claimStatus'];
 
 const DEFAULT_SCAN_ERROR_MESSAGE = 'Unable to scan claimable payouts.';
+const CLAIM_CENTER_SCAN_UNAVAILABLE_MESSAGE =
+  'Live claim scanning is unavailable in the current environment.';
 const DEFAULT_CLAIM_ERROR_MESSAGE = 'Unable to claim payout.';
+const CLAIM_CENTER_CLAIM_UNAVAILABLE_MESSAGE =
+  'Live payout claiming is unavailable in the current environment.';
 const WALLET_CONNECTION_ERROR_MESSAGE = 'Wallet connection is unavailable.';
 const CLAIM_CENTER_WALLET_LABEL = 'Embedded wallet preview';
 const CLAIM_CENTER_PRIVACY_GUIDANCE =
@@ -57,8 +63,8 @@ async function previewClaimPrivatePayout(payoutId: string): Promise<ClaimPrivate
 }
 
 function getScanErrorMessage(error: unknown): string {
-  if (error instanceof Error) {
-    return DEFAULT_SCAN_ERROR_MESSAGE;
+  if (error instanceof Error && error.message === UMBRA_SDK_SCANNER_UNAVAILABLE_MESSAGE) {
+    return CLAIM_CENTER_SCAN_UNAVAILABLE_MESSAGE;
   }
 
   return DEFAULT_SCAN_ERROR_MESSAGE;
@@ -70,6 +76,14 @@ function getClaimFeedbackMessage(result: ClaimPrivatePayoutResult): string {
   }
 
   return `Claim completed for the current session. Reference: ${result.transactionHash}.`;
+}
+
+function getClaimErrorMessage(error: unknown): string {
+  if (error instanceof Error && error.message === UMBRA_SDK_CLAIM_UNAVAILABLE_MESSAGE) {
+    return CLAIM_CENTER_CLAIM_UNAVAILABLE_MESSAGE;
+  }
+
+  return DEFAULT_CLAIM_ERROR_MESSAGE;
 }
 
 function mergeClaimablePayouts(
@@ -118,6 +132,7 @@ interface ClaimCenterPageContentProps {
   walletLabel: string;
   scanClaimablePayouts: ScanClaimablePayouts;
   claimPrivatePayout: ClaimPrivatePayout;
+  hasLifecycleReviewContext: boolean;
 }
 
 function ClaimablePayoutCard({
@@ -154,6 +169,7 @@ function ClaimCenterPageContent({
   walletLabel,
   scanClaimablePayouts,
   claimPrivatePayout,
+  hasLifecycleReviewContext,
 }: ClaimCenterPageContentProps) {
   const claimResultsTitleId = useId();
   const [phase, setPhase] = useState<ClaimCenterPhase>('idle');
@@ -253,8 +269,8 @@ function ClaimCenterPageContent({
 
       syncClaimablePayouts(nextPayouts);
       setClaimFeedback(getClaimFeedbackMessage(result));
-    } catch {
-      setClaimError(DEFAULT_CLAIM_ERROR_MESSAGE);
+    } catch (error: unknown) {
+      setClaimError(getClaimErrorMessage(error));
       setClaimFeedback(null);
     } finally {
       claimInFlightRef.current = false;
@@ -326,7 +342,7 @@ function ClaimCenterPageContent({
         </section>
       ) : null}
 
-      {claimFeedback && activeClaimPayoutId === null && !claimError ? (
+      {claimFeedback && activeClaimPayoutId === null && !claimError && hasLifecycleReviewContext ? (
         <Panel heading="Next action" role="region" aria-label="Next action">
           <p>
             Continue the reward lifecycle in Disclosure / Verification or review the combined
@@ -370,6 +386,7 @@ export function ClaimCenterPage({
   walletLabel,
   scanClaimablePayouts = previewScanClaimablePayouts,
   claimPrivatePayout = previewClaimPrivatePayout,
+  hasLifecycleReviewContext = false,
 }: ClaimCenterPageProps) {
   const wallet = useWallet();
 
@@ -445,6 +462,7 @@ export function ClaimCenterPage({
       walletLabel={walletLabel ?? CLAIM_CENTER_WALLET_LABEL}
       scanClaimablePayouts={scanClaimablePayouts}
       claimPrivatePayout={claimPrivatePayout}
+      hasLifecycleReviewContext={hasLifecycleReviewContext}
     />
   );
 }

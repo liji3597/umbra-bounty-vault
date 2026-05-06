@@ -32,6 +32,7 @@ describe('DisclosurePage', () => {
     expect(await screen.findByText('Recipient verification package')).toBeInTheDocument();
     expect(screen.getByText('Bounded recipient access is available for this payout preview.')).toBeInTheDocument();
     expect(screen.getByText('Reference: preview-disclosure')).toBeInTheDocument();
+    expect(screen.getByText('Prepared preview')).toBeInTheDocument();
     expect(
       screen.getByText(
         'Review a bounded disclosure package through the typed service boundary. This surface stays coherent with the reward narrative without implying one exact live continuation from the prior step.',
@@ -39,7 +40,7 @@ describe('DisclosurePage', () => {
     ).toBeInTheDocument();
     expect(
       screen.getByText(
-        'This view requests a prepared disclosure package through the typed service boundary while staying aligned with the payout and claim narrative.',
+        'This disclosure package is a prepared preview narrative and is not backed by a connected wallet-scoped truth context.',
       ),
     ).toBeInTheDocument();
 
@@ -58,6 +59,46 @@ describe('DisclosurePage', () => {
       'href',
       '/app/claim',
     );
+  });
+
+  it('shows demo-derived disclosure source when provided', async () => {
+    const buildDisclosureView: BuildDisclosureView = vi.fn().mockResolvedValue(defaultDisclosureView);
+
+    render(<DisclosurePage buildDisclosureView={buildDisclosureView} truthSource="demo-derived" />);
+
+    expect(await screen.findByText('Recipient verification package')).toBeInTheDocument();
+    expect(screen.getByText('Demo-derived')).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        'This disclosure package is derived from the active demo continuity session and remains bounded product narrative rather than a protocol-level live artifact.',
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it('shows live-derived disclosure source when provided', async () => {
+    const buildDisclosureView: BuildDisclosureView = vi.fn().mockResolvedValue(defaultDisclosureView);
+
+    render(<DisclosurePage buildDisclosureView={buildDisclosureView} truthSource="live-derived" />);
+
+    expect(await screen.findByText('Recipient verification package')).toBeInTheDocument();
+    expect(screen.getByText('Live-derived')).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        'This disclosure package is derived from wallet-scoped provider truth and stays bounded to an app-level summary instead of claiming a full protocol disclosure artifact.',
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it('shows an unavailable state when no disclosure request context is available', async () => {
+    const buildDisclosureView: BuildDisclosureView = vi.fn();
+
+    render(<DisclosurePage buildDisclosureView={buildDisclosureView} defaultInput={null} />);
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Disclosure preview is currently unavailable.',
+    );
+    expect(buildDisclosureView).not.toHaveBeenCalled();
+    expect(screen.getByText('Unavailable')).toBeInTheDocument();
   });
 
   it('shows an unavailable state when the returned disclosure references a different payout', async () => {
@@ -101,17 +142,23 @@ describe('DisclosurePage', () => {
       revealedFields: [],
     });
 
-    render(<DisclosurePage buildDisclosureView={buildDisclosureView} />);
-
-    expect(await screen.findByRole('alert')).toHaveTextContent(
-      'Disclosure preview is currently unavailable.',
+    render(
+      <DisclosurePage
+        buildDisclosureView={buildDisclosureView}
+        defaultInput={{
+          payoutId: 'preview-disclosure',
+          level: 'none',
+          viewerRole: 'recipient',
+        }}
+      />,
     );
-    expect(screen.getByText('Unavailable')).toBeInTheDocument();
-    expect(screen.queryByText('Opaque disclosure view')).not.toBeInTheDocument();
-    expect(screen.queryByText('No payout fields are revealed for this disclosure level.')).not.toBeInTheDocument();
+
+    expect(await screen.findByText('Opaque disclosure view')).toBeInTheDocument();
+    expect(screen.getByText('Ready')).toBeInTheDocument();
+    expect(screen.getByText('No payout fields are revealed for this disclosure level.')).toBeInTheDocument();
     expect(
-      screen.queryByText('No verification artifacts are required for this disclosure level.'),
-    ).not.toBeInTheDocument();
+      screen.getByText('No verification artifacts are required for this disclosure level.'),
+    ).toBeInTheDocument();
   });
 
   it('shows a stable unavailable state when the disclosure load fails', async () => {

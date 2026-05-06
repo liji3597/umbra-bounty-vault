@@ -16,7 +16,12 @@ test('covers the current gated preview flow and explicit demo boundaries', async
     page.getByText(/A private workflow for payout creation, recipient claiming, and bounded disclosure\./i),
   ).toBeVisible();
 
-  await page.locator('a[href="/app/payouts/new"]').first().click();
+  const createPayoutCta = page
+    .getByRole('link', { name: 'Create Payout', exact: true })
+    .filter({ visible: true })
+    .nth(1);
+  await expect(createPayoutCta).toHaveAttribute('href', '/app/payouts/new');
+  await createPayoutCta.click();
   await expect(page).toHaveURL('/app/payouts/new');
   await expect(page.getByRole('heading', { name: 'Create Payout', level: 1 })).toBeVisible();
   await expect(page.getByText('Wallet disconnected')).toBeVisible();
@@ -52,7 +57,7 @@ test('covers the current gated preview flow and explicit demo boundaries', async
   await expect(page.getByRole('heading', { name: 'Activity', level: 1 })).toBeVisible();
   await expect(
     page.getByText(
-      'Follow one coherent wallet-scoped narrative across payout submission, claim progress, and bounded disclosure output. When no active demo session exists, this surface falls back to a prepared preview narrative instead of implying a fully live end-to-end replay.',
+      'Follow one coherent wallet-scoped narrative across payout submission, claim progress, and bounded disclosure output. Disconnected and unsupported wallet states can still use a prepared preview narrative, while connected supported sessions stay within truth-backed activity context.',
     ),
   ).toBeVisible();
   const narrativeSummary = page.getByRole('region', { name: 'Narrative summary' });

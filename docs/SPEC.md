@@ -276,18 +276,18 @@ Disclosure and Activity should remain **live-aware**, not fully real, while stay
 - The app must support discovery of claimable payouts.
 - The app must clearly distinguish scanning, no-result, and found-result states.
 - The app must provide a recipient claim action when eligible.
-- Phase 1 may satisfy this through wallet-scoped demo continuity rather than a fully live claim backend.
+- Phase 1 may satisfy this through SDK-backed wallet-scoped scan and claim flows within a bounded devnet-first scope rather than a production-complete claim backend.
 
 ### FR-4 Disclosure / Verification
 - The app must provide a bounded disclosure experience.
 - The app must support different disclosure readiness states.
 - The app must avoid presenting disclosure as full public audit tooling.
-- Phase 1 disclosure may be live-aware without claiming full live disclosure assembly.
+- Phase 1 disclosure may be live-aware and derived from wallet-scoped provider truth without claiming a full live disclosure backend.
 
 ### FR-5 Activity View
 - The app must present the lifecycle of payout, claim, and disclosure events in a coherent sequence.
 - The app must preserve enough active wallet-session context for Activity and Disclosure to narrate the same payout after create and claim actions.
-- Phase 1 activity may be live-aware without claiming fully real end-to-end protocol state.
+- Phase 1 activity may be live-aware and wallet-scoped without claiming a replayable end-to-end protocol audit trail.
 
 ### FR-6 Typed Interaction Boundaries
 - UI state must be separated from protocol/service logic.

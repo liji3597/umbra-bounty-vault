@@ -14,6 +14,7 @@ import {
 import type {
   Connection,
   Transaction,
+  VersionedTransaction,
 } from '@solana/web3.js';
 
 import type { WalletNetwork } from '@/features/shared/network';
@@ -29,6 +30,14 @@ export type SolanaWalletSubmitTransaction = (
   minContextSlot: number,
 ) => Promise<string>;
 
+export type SolanaWalletSignMessage = (message: Uint8Array) => Promise<Uint8Array>;
+export type SolanaWalletSignTransaction = (
+  transaction: Transaction | VersionedTransaction,
+) => Promise<Transaction | VersionedTransaction>;
+export type SolanaWalletSignAllTransactions = (
+  transactions: readonly (Transaction | VersionedTransaction)[],
+) => Promise<(Transaction | VersionedTransaction)[]>;
+
 export interface WalletProviderState {
   status: WalletStatus;
   network: WalletNetwork;
@@ -42,6 +51,7 @@ export interface DemoFlowSession {
   claimResult: ClaimPrivatePayoutResult | null;
   network: Exclude<WalletNetwork, 'unsupported'>;
   connectionVersion: number;
+  walletAddress: string;
 }
 
 export interface WalletContextValue extends WalletProviderState {
@@ -52,9 +62,12 @@ export interface WalletContextValue extends WalletProviderState {
   connectionVersion: number;
   walletAddress: string | null;
   submitTransaction: SolanaWalletSubmitTransaction | null;
+  signTransaction: SolanaWalletSignTransaction | null;
+  signAllTransactions: SolanaWalletSignAllTransactions | null;
+  signMessage: SolanaWalletSignMessage | null;
   connection: SolanaWalletConnection | null;
   demoFlowSession: DemoFlowSession | null;
-  saveDemoFlowSession: (session: Omit<DemoFlowSession, 'claimResult'>) => void;
+  saveDemoFlowSession: (session: Omit<DemoFlowSession, 'claimResult' | 'walletAddress'>) => void;
   updateDemoFlowClaimResult: (claimResult: ClaimPrivatePayoutResult) => void;
   clearDemoFlowSession: () => void;
 }
@@ -62,6 +75,13 @@ export interface WalletContextValue extends WalletProviderState {
 interface WalletSessionState {
   connectionVersion: number;
   walletState: WalletProviderState;
+}
+
+interface LatestWalletSessionState {
+  connectionVersion: number;
+  network: WalletNetwork;
+  isSupportedNetwork: boolean;
+  walletAddress: string;
 }
 
 const DEFAULT_WALLET_STATE: WalletProviderState = {
@@ -83,6 +103,10 @@ function getNetworkLabel(network: WalletNetwork): string {
     default:
       return 'Solana Devnet';
   }
+}
+
+function getDemoFlowSessionWalletAddress(walletAddress: string | null, connectionVersion: number): string {
+  return walletAddress ?? `preview-wallet-${connectionVersion}`;
 }
 
 function createInitialWalletState(initialState?: Partial<WalletProviderState>): WalletProviderState {
@@ -114,7 +138,7 @@ export function WalletProvider({ children, initialState }: WalletProviderProps) 
   );
   const [demoFlowSession, setDemoFlowSession] = useState<DemoFlowSession | null>(null);
   const solanaWalletBridge = useSolanaWalletBridge();
-  const latestWalletSessionRef = useRef<{ connectionVersion: number; network: WalletNetwork; isSupportedNetwork: boolean } | null>(null);
+  const latestWalletSessionRef = useRef<LatestWalletSessionState | null>(null);
 
   const connect = useCallback(() => {
     if (solanaWalletBridge) {
@@ -172,7 +196,7 @@ export function WalletProvider({ children, initialState }: WalletProviderProps) 
     setDemoFlowSession(null);
   }, [solanaWalletBridge]);
 
-  const saveDemoFlowSession = useCallback((session: Omit<DemoFlowSession, 'claimResult'>) => {
+  const saveDemoFlowSession = useCallback((session: Omit<DemoFlowSession, 'claimResult' | 'walletAddress'>) => {
     setDemoFlowSession((currentSession) => {
       const latestWalletSession = latestWalletSessionRef.current;
 
@@ -188,6 +212,7 @@ export function WalletProvider({ children, initialState }: WalletProviderProps) 
       return {
         ...session,
         claimResult: null,
+        walletAddress: latestWalletSession.walletAddress,
       };
     });
   }, []);
@@ -215,15 +240,42 @@ export function WalletProvider({ children, initialState }: WalletProviderProps) 
 
   const activeWalletState = solanaWalletBridge?.walletState ?? walletSession.walletState;
   const activeConnectionVersion = solanaWalletBridge?.connectionVersion ?? walletSession.connectionVersion;
+  const activeWalletAddress = getDemoFlowSessionWalletAddress(
+    solanaWalletBridge?.walletAddress ?? null,
+    activeConnectionVersion,
+  );
   const isActiveWalletSupported = activeWalletState.network !== 'unsupported';
+  const visibleDemoFlowSession = useMemo(() => {
+    if (!demoFlowSession) {
+      return demoFlowSession;
+    }
+
+    if (
+      !isActiveWalletSupported ||
+      demoFlowSession.connectionVersion !== activeConnectionVersion ||
+      demoFlowSession.network !== activeWalletState.network ||
+      demoFlowSession.walletAddress !== activeWalletAddress
+    ) {
+      return null;
+    }
+
+    return demoFlowSession;
+  }, [
+    activeConnectionVersion,
+    activeWalletAddress,
+    activeWalletState.network,
+    demoFlowSession,
+    isActiveWalletSupported,
+  ]);
 
   useInsertionEffect(() => {
     latestWalletSessionRef.current = {
       connectionVersion: activeConnectionVersion,
       network: activeWalletState.network,
       isSupportedNetwork: isActiveWalletSupported,
+      walletAddress: activeWalletAddress,
     };
-  }, [activeConnectionVersion, activeWalletState.network, isActiveWalletSupported]);
+  }, [activeConnectionVersion, activeWalletAddress, activeWalletState.network, isActiveWalletSupported]);
 
   const contextValue = useMemo<WalletContextValue>(
     () => ({
@@ -235,8 +287,11 @@ export function WalletProvider({ children, initialState }: WalletProviderProps) 
       connectionVersion: activeConnectionVersion,
       walletAddress: solanaWalletBridge?.walletAddress ?? null,
       submitTransaction: solanaWalletBridge?.submitTransaction ?? null,
+      signTransaction: solanaWalletBridge?.signTransaction ?? null,
+      signAllTransactions: solanaWalletBridge?.signAllTransactions ?? null,
+      signMessage: solanaWalletBridge?.signMessage ?? null,
       connection: solanaWalletBridge?.connection ?? null,
-      demoFlowSession,
+      demoFlowSession: visibleDemoFlowSession,
       saveDemoFlowSession,
       updateDemoFlowClaimResult,
       clearDemoFlowSession,
@@ -246,14 +301,17 @@ export function WalletProvider({ children, initialState }: WalletProviderProps) 
       activeWalletState,
       clearDemoFlowSession,
       connect,
-      demoFlowSession,
       disconnect,
       isActiveWalletSupported,
       saveDemoFlowSession,
       solanaWalletBridge?.connection,
       solanaWalletBridge?.submitTransaction,
+      solanaWalletBridge?.signTransaction,
+      solanaWalletBridge?.signAllTransactions,
+      solanaWalletBridge?.signMessage,
       solanaWalletBridge?.walletAddress,
       updateDemoFlowClaimResult,
+      visibleDemoFlowSession,
     ],
   );
 

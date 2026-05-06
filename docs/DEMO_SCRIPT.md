@@ -6,12 +6,12 @@ Provide a presenter-ready script for showing `Umbra Bounty Vault` as a privacy-f
 
 This file is intentionally aligned with the current repository scope:
 
-- real wallet adapter entry with linked demo-session continuity
-- minimal live devnet anchor in Create Payout
-- typed demo Umbra service boundary
+- real wallet adapter entry with linked wallet-scoped session continuity
+- SDK-backed create -> scan -> claim flows for supported wallet sessions
+- bounded wallet-scoped disclosure/activity summaries
 - linked lifecycle continuity across product surfaces
 
-It should not be read as a claim of full live end-to-end protocol integration or one shared on-chain payout context across every page.
+It should not be read as a claim of full live end-to-end protocol integration or a production-complete audit/disclosure backend.
 
 ---
 
@@ -80,7 +80,7 @@ Make sponsor fit clear before touching the detailed workflow.
 **Say:**
 - Here the sender is guided through a structured payout flow instead of a raw transaction form.
 - The product frames payout creation as part of a contributor reward workflow.
-- In the current repo, this is where the minimal live devnet anchor exists, with the rest of the workflow staying inside a linked demo session and typed demo boundary.
+- In the current repo, this step is SDK-backed for supported wallet sessions and stays within a bounded devnet-first demo scope.
 
 **Goal:**
 Show product structure, not just form submission.
@@ -99,7 +99,7 @@ Show product structure, not just form submission.
 **Say:**
 - On the recipient side, the experience is claim-based rather than a normal public wallet receipt.
 - The user discovers eligible reward states and claims through the app.
-- In the current demo scope, the recipient follows the same linked demo session through a wallet-scoped claim continuity flow rather than a fully live devnet claim indexer or settlement path.
+- In the current demo scope, Claim Center uses SDK-backed wallet-scoped scan and claim paths when dependencies are configured, while still staying honest about the bounded devnet-first happy path.
 
 **Goal:**
 Highlight the strongest product differentiator: claimable rewards, not just direct transfer.
@@ -118,10 +118,10 @@ Highlight the strongest product differentiator: claimable rewards, not just dire
 **Say:**
 - Privacy does not have to mean zero explainability.
 - Some workflows still require limited proof or verification context.
-- In the current implementation, this page stays within the same linked demo narrative and demonstrates controlled disclosure through the typed service boundary rather than a full live disclosure backend.
+- In the current implementation, this page derives a bounded wallet-scoped disclosure summary from provider truth when available, rather than claiming a full protocol disclosure backend.
 
 **Goal:**
-Explain that privacy and verification can coexist without implying one shared live payout context across pages.
+Explain that privacy and verification can coexist without implying a production-complete disclosure service.
 
 ---
 
@@ -132,12 +132,12 @@ Explain that privacy and verification can coexist without implying one shared li
 **Do:**
 - show the narrative summary
 - point out payout, claim, and disclosure milestones
-- describe the page as a prepared lifecycle narrative
+- describe the page as a wallet-scoped lifecycle narrative
 
 **Say:**
 - Activity summarizes the reward lifecycle as one coherent product narrative.
 - This is where isolated crypto actions become a readable workflow story.
-- In the current implementation, this page stays wallet-scoped and live-aware within the linked demo narrative, while still falling back from a fully live end-to-end replay when no matching active session is available.
+- In the current implementation, this page stays wallet-scoped and live-aware, deriving bounded narrative context from provider truth when it matches the active session and otherwise falling back to preview or explicit unavailable states.
 
 **Goal:**
 Close the loop in product terms while staying honest about current continuity limits.
@@ -165,7 +165,7 @@ Close the loop in product terms while staying honest about current continuity li
 ### Middle
 - Teams need to issue rewards without exposing every recipient relationship publicly.
 - This app shows a structured flow for private payout creation, recipient claim, and controlled disclosure.
-- The current demo uses a minimal live devnet anchor in Create Payout plus prepared product states and a typed demo service boundary to explain the rest of the workflow clearly.
+- The current demo uses SDK-backed create/scan/claim plus bounded disclosure/activity summaries to explain the workflow clearly without overstating backend completeness.
 
 ### Closing
 - The result is a workflow narrative: create, claim, disclose, review.
@@ -278,9 +278,6 @@ Avoid saying:
 
 If asked directly about implementation scope, say:
 
-- the current repository demonstrates the workflow through a linked demo session and prepared fallback states
-- the service boundary is intentionally typed and demo-friendly
-- Create Payout contains the current live devnet anchor
-- claim, disclosure, and activity are not yet a fully live end-to-end devnet path
-- disclosure and activity stay aligned with the same linked demo narrative rather than proving one shared live backend or indexer context
+- the current repository demonstrates an SDK-backed create -> scan -> claim flow plus bounded disclosure/activity summaries
+- disclosure and activity stay aligned with wallet-scoped truth boundaries rather than claiming a full protocol disclosure or audit backend
 - the goal of this submission is to show a credible product shape and lifecycle

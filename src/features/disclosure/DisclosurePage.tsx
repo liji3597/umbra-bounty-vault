@@ -8,13 +8,16 @@ import { getAppRoute } from '@/lib/routes';
 
 import type { BuildDisclosureViewInput, DisclosureView } from './schema';
 
+export type DisclosureTruthSource = 'prepared-preview' | 'demo-derived' | 'live-derived';
+
 export type BuildDisclosureView = (
   input: BuildDisclosureViewInput,
 ) => Promise<DisclosureView>;
 
 interface DisclosurePageProps {
   buildDisclosureView: BuildDisclosureView;
-  defaultInput?: BuildDisclosureViewInput;
+  defaultInput?: BuildDisclosureViewInput | null;
+  truthSource?: DisclosureTruthSource;
 }
 
 type DisclosurePagePhase = 'loading' | 'success' | 'error';
@@ -55,6 +58,30 @@ function getPhaseLabel(phase: DisclosurePagePhase): string {
   }
 }
 
+function getDisclosureTruthSourceLabel(truthSource: DisclosureTruthSource): string {
+  switch (truthSource) {
+    case 'demo-derived':
+      return 'Demo-derived';
+    case 'live-derived':
+      return 'Live-derived';
+    case 'prepared-preview':
+    default:
+      return 'Prepared preview';
+  }
+}
+
+function getDisclosureTruthSourceSummary(truthSource: DisclosureTruthSource): string {
+  switch (truthSource) {
+    case 'demo-derived':
+      return 'This disclosure package is derived from the active demo continuity session and remains bounded product narrative rather than a protocol-level live artifact.';
+    case 'live-derived':
+      return 'This disclosure package is derived from wallet-scoped provider truth and stays bounded to an app-level summary instead of claiming a full protocol disclosure artifact.';
+    case 'prepared-preview':
+    default:
+      return 'This disclosure package is a prepared preview narrative and is not backed by a connected wallet-scoped truth context.';
+  }
+}
+
 function isConsistentDisclosureView(
   view: DisclosureView,
   requestedInput: BuildDisclosureViewInput,
@@ -71,11 +98,14 @@ function getDisclosureErrorMessage(
 
 export function DisclosurePage({
   buildDisclosureView,
-  defaultInput = PREVIEW_DISCLOSURE_INPUT,
+  defaultInput,
+  truthSource,
 }: DisclosurePageProps) {
   const [phase, setPhase] = useState<DisclosurePagePhase>('loading');
   const [view, setView] = useState<DisclosureView | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const requestedInput = defaultInput === undefined ? PREVIEW_DISCLOSURE_INPUT : defaultInput;
+  const activeTruthSource = truthSource ?? (defaultInput === undefined ? 'prepared-preview' : undefined);
 
   useEffect(() => {
     let isActive = true;
@@ -84,14 +114,21 @@ export function DisclosurePage({
       setPhase('loading');
       setErrorMessage(null);
 
+      if (!requestedInput) {
+        setView(null);
+        setErrorMessage(DISCLOSURE_LOAD_ERROR_MESSAGE);
+        setPhase('error');
+        return;
+      }
+
       try {
-        const nextView = await buildDisclosureView(defaultInput);
+        const nextView = await buildDisclosureView(requestedInput);
 
         if (!isActive) {
           return;
         }
 
-        const nextErrorMessage = getDisclosureErrorMessage(nextView, defaultInput);
+        const nextErrorMessage = getDisclosureErrorMessage(nextView, requestedInput);
 
         if (nextErrorMessage) {
           setView(null);
@@ -118,9 +155,9 @@ export function DisclosurePage({
     return () => {
       isActive = false;
     };
-  }, [buildDisclosureView, defaultInput]);
+  }, [buildDisclosureView, requestedInput]);
 
-  const activeLevel = view?.level ?? defaultInput.level;
+  const activeLevel = view?.level ?? requestedInput?.level ?? PREVIEW_DISCLOSURE_INPUT.level;
 
   return (
     <section className="disclosure-page">
@@ -136,6 +173,7 @@ export function DisclosurePage({
         <div aria-label="Disclosure meta" className="disclosure-page__badges">
           <Badge>{getDisclosureLabel(activeLevel)}</Badge>
           <Badge>{REQUESTED_DISCLOSURE_VIEW_LABEL}</Badge>
+          {activeTruthSource ? <Badge>{getDisclosureTruthSourceLabel(activeTruthSource)}</Badge> : null}
           <Badge>{getPhaseLabel(phase)}</Badge>
         </div>
       </Panel>
@@ -147,8 +185,9 @@ export function DisclosurePage({
           description="This disclosure package stays bounded and follows the same typed service boundary used across the reward flow."
         >
           <p>
-            This view requests a prepared disclosure package through the typed service boundary while
-            staying aligned with the payout and claim narrative.
+            {activeTruthSource
+              ? getDisclosureTruthSourceSummary(activeTruthSource)
+              : 'This view requests a prepared disclosure package through the typed service boundary while staying aligned with the payout and claim narrative.'}
           </p>
         </Panel>
 
@@ -164,7 +203,7 @@ export function DisclosurePage({
           </Panel>
         ) : null}
 
-        {phase === 'success' && view && isConsistentDisclosureView(view, defaultInput) ? (
+        {phase === 'success' && view && requestedInput && isConsistentDisclosureView(view, requestedInput) ? (
           <>
             <Panel
               heading={view.title}

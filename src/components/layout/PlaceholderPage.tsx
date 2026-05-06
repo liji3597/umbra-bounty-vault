@@ -33,12 +33,36 @@ interface DashboardDisclosure {
   artifact: string;
 }
 
+function canOpenDisclosureFromDashboard(wallet: ReturnType<typeof useWallet>): boolean {
+  if (wallet.status !== 'connected') {
+    return true;
+  }
+
+  if (!wallet.isSupportedNetwork) {
+    return true;
+  }
+
+  return Boolean(wallet.demoFlowSession);
+}
+
 interface DashboardPathItem {
   href: string;
   title: string;
   step: string;
   description: string;
   action: string;
+}
+
+function canOpenActivityFromDashboard(wallet: ReturnType<typeof useWallet>): boolean {
+  if (wallet.status !== 'connected') {
+    return true;
+  }
+
+  if (!wallet.isSupportedNetwork) {
+    return true;
+  }
+
+  return Boolean(wallet.demoFlowSession?.claimResult);
 }
 
 interface DashboardActivityItem {
@@ -52,36 +76,45 @@ const CLAIM_CENTER_ROUTE = getAppRoute('/app/claim');
 const DISCLOSURE_ROUTE = getAppRoute('/app/disclosure');
 const ACTIVITY_ROUTE = getAppRoute('/app/activity');
 
-const DASHBOARD_PATH: DashboardPathItem[] = [
-  {
-    href: CREATE_PAYOUT_ROUTE.href,
-    title: 'Create payout',
-    step: 'Step 1',
-    description: 'Prepare a private reward with a guided review step and a single-asset devnet-first boundary.',
-    action: 'Create payout',
-  },
-  {
-    href: CLAIM_CENTER_ROUTE.href,
-    title: 'Claim center',
-    step: 'Step 2',
-    description: 'Scan as the recipient, confirm eligibility, and execute the claim from the connected wallet session.',
-    action: 'Open claim center',
-  },
-  {
-    href: DISCLOSURE_ROUTE.href,
-    title: 'Disclosure',
-    step: 'Step 3',
-    description: 'Review a bounded verification view when a sponsor or reviewer asks for limited proof.',
-    action: 'Review disclosure',
-  },
-  {
-    href: ACTIVITY_ROUTE.href,
-    title: 'Activity',
-    step: 'Step 4',
-    description: 'Close the narrative with a wallet-scoped lifecycle view across payout, claim, and disclosure.',
-    action: 'Review activity',
-  },
-];
+function getDashboardPath(wallet: ReturnType<typeof useWallet>): DashboardPathItem[] {
+  const canOpenDisclosure = canOpenDisclosureFromDashboard(wallet);
+  const canOpenActivity = canOpenActivityFromDashboard(wallet);
+
+  return [
+    {
+      href: CREATE_PAYOUT_ROUTE.href,
+      title: 'Create payout',
+      step: 'Step 1',
+      description: 'Prepare a private reward with a guided review step and a single-asset devnet-first boundary.',
+      action: 'Create payout',
+    },
+    {
+      href: CLAIM_CENTER_ROUTE.href,
+      title: 'Claim center',
+      step: 'Step 2',
+      description: 'Scan as the recipient, confirm eligibility, and execute the claim from the connected wallet session.',
+      action: 'Open claim center',
+    },
+    {
+      href: DISCLOSURE_ROUTE.href,
+      title: 'Disclosure',
+      step: 'Step 3',
+      description: canOpenDisclosure
+        ? 'Review a bounded verification view when a sponsor or reviewer asks for limited proof.'
+        : 'Create a linked payout session before opening the bounded disclosure view.',
+      action: canOpenDisclosure ? 'Review disclosure' : 'Disclosure needs linked payout',
+    },
+    {
+      href: ACTIVITY_ROUTE.href,
+      title: 'Activity',
+      step: 'Step 4',
+      description: canOpenActivity
+        ? 'Close the narrative with a wallet-scoped lifecycle view across payout, claim, and disclosure.'
+        : 'Complete a linked claim flow before opening the wallet-scoped lifecycle view.',
+      action: canOpenActivity ? 'Review activity' : 'Activity needs linked claim',
+    },
+  ];
+}
 
 function getDisclosureStatusTitle(level: DisclosureLevel): string {
   switch (level) {
@@ -130,8 +163,12 @@ function getDashboardDisclosures(wallet: ReturnType<typeof useWallet>): Dashboar
     return [
       {
         title: 'Disclosure queue is empty',
-        detail: 'Create a payout to stage a bounded verification package for the current wallet session.',
-        artifact: 'Open disclosure workspace',
+        detail: canOpenDisclosureFromDashboard(wallet)
+          ? 'Create a payout to stage a bounded verification package for the current wallet session.'
+          : 'Create a payout first to activate disclosure for the current connected wallet session.',
+        artifact: canOpenDisclosureFromDashboard(wallet)
+          ? 'Open disclosure workspace'
+          : 'Disclosure unlocks after linked payout',
       },
     ];
   }
@@ -342,8 +379,10 @@ export function AppPlaceholder({ route }: AppPlaceholderProps) {
 export function DashboardPageOverview() {
   const wallet = useWallet();
   const primaryAction = getPrimaryAction(wallet);
+  const dashboardPath = getDashboardPath(wallet);
   const dashboardDisclosures = getDashboardDisclosures(wallet);
   const dashboardActivity = getDashboardActivity(wallet);
+  const canOpenDisclosure = canOpenDisclosureFromDashboard(wallet);
 
   return (
     <section className="dashboard-page">
@@ -381,18 +420,37 @@ export function DashboardPageOverview() {
             <h2 className="dashboard-page__section-title">Follow the reward lifecycle in order</h2>
           </div>
           <ol className="dashboard-page__path-list">
-            {DASHBOARD_PATH.map((item) => (
-              <li key={item.title}>
-                <Link className="dashboard-page__path-item" href={item.href}>
-                  <div className="dashboard-page__path-header">
-                    <p className="dashboard-page__path-step">{item.step}</p>
-                    <h3 className="dashboard-page__path-title">{item.title}</h3>
-                  </div>
-                  <p className="dashboard-page__path-description">{item.description}</p>
-                  <span className="dashboard-page__path-link">{item.action}</span>
-                </Link>
-              </li>
-            ))}
+            {dashboardPath.map((item) => {
+              const canOpenPath = item.href === DISCLOSURE_ROUTE.href
+                ? canOpenDisclosureFromDashboard(wallet)
+                : item.href === ACTIVITY_ROUTE.href
+                  ? canOpenActivityFromDashboard(wallet)
+                  : true;
+
+              return (
+                <li key={item.title}>
+                  {canOpenPath ? (
+                    <Link className="dashboard-page__path-item" href={item.href}>
+                      <div className="dashboard-page__path-header">
+                        <p className="dashboard-page__path-step">{item.step}</p>
+                        <h3 className="dashboard-page__path-title">{item.title}</h3>
+                      </div>
+                      <p className="dashboard-page__path-description">{item.description}</p>
+                      <span className="dashboard-page__path-link">{item.action}</span>
+                    </Link>
+                  ) : (
+                    <div className="dashboard-page__path-item">
+                      <div className="dashboard-page__path-header">
+                        <p className="dashboard-page__path-step">{item.step}</p>
+                        <h3 className="dashboard-page__path-title">{item.title}</h3>
+                      </div>
+                      <p className="dashboard-page__path-description">{item.description}</p>
+                      <span className="dashboard-page__path-link">{item.action}</span>
+                    </div>
+                  )}
+                </li>
+              );
+            })}
           </ol>
         </Panel>
 
@@ -415,23 +473,40 @@ export function DashboardPageOverview() {
         <Panel className="dashboard-page__disclosure-surface">
           <div className="dashboard-page__disclosure-header">
             <h2 className="dashboard-page__section-title">Disclosure status</h2>
-            <Link className="dashboard-page__archive-link" href={DISCLOSURE_ROUTE.href}>
-              Review disclosure
-            </Link>
+            {canOpenDisclosure ? (
+              <Link className="dashboard-page__archive-link" href={DISCLOSURE_ROUTE.href}>
+                Review disclosure
+              </Link>
+            ) : (
+              <span className="dashboard-page__archive-link">Disclosure needs linked payout</span>
+            )}
           </div>
           <div className="dashboard-page__disclosure-list">
-            {dashboardDisclosures.map((item) => (
-              <Link className="dashboard-page__disclosure-item" href={DISCLOSURE_ROUTE.href} key={item.title}>
-                <div className="dashboard-page__disclosure-icon" aria-hidden="true">
-                  {item.title.startsWith('Judge') ? '◫' : '◪'}
+            {dashboardDisclosures.map((item) =>
+              canOpenDisclosure ? (
+                <Link className="dashboard-page__disclosure-item" href={DISCLOSURE_ROUTE.href} key={item.title}>
+                  <div className="dashboard-page__disclosure-icon" aria-hidden="true">
+                    {item.title.startsWith('Judge') ? '◫' : '◪'}
+                  </div>
+                  <div className="dashboard-page__disclosure-copy">
+                    <p className="dashboard-page__disclosure-title">{item.title}</p>
+                    <p className="dashboard-page__disclosure-detail">{item.detail}</p>
+                  </div>
+                  <span className="dashboard-page__disclosure-link">{item.artifact}</span>
+                </Link>
+              ) : (
+                <div className="dashboard-page__disclosure-item" key={item.title}>
+                  <div className="dashboard-page__disclosure-icon" aria-hidden="true">
+                    {item.title.startsWith('Judge') ? '◫' : '◪'}
+                  </div>
+                  <div className="dashboard-page__disclosure-copy">
+                    <p className="dashboard-page__disclosure-title">{item.title}</p>
+                    <p className="dashboard-page__disclosure-detail">{item.detail}</p>
+                  </div>
+                  <span className="dashboard-page__disclosure-link">{item.artifact}</span>
                 </div>
-                <div className="dashboard-page__disclosure-copy">
-                  <p className="dashboard-page__disclosure-title">{item.title}</p>
-                  <p className="dashboard-page__disclosure-detail">{item.detail}</p>
-                </div>
-                <span className="dashboard-page__disclosure-link">{item.artifact}</span>
-              </Link>
-            ))}
+              ),
+            )}
           </div>
         </Panel>
 

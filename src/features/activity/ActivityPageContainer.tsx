@@ -3,7 +3,11 @@
 import { useCallback, useInsertionEffect, useMemo, useRef } from 'react';
 
 import type { ClaimablePayout } from '@/features/claim/schema';
-import { demoUmbraService } from '@/features/protocol/demoUmbraService';
+import {
+  resolveDemoUmbraProvider,
+  resolveReadOnlyUmbraProvider,
+} from '@/features/protocol/umbraProviderResolver';
+import { loadUmbraSdkModule } from '@/features/protocol/umbraSdkClient';
 import type { WalletNetwork } from '@/features/shared/network';
 import { useWallet, type DemoFlowSession } from '@/providers/WalletProvider';
 
@@ -15,8 +19,43 @@ const PREVIEW_ACTIVITY_RECIPIENT = `${PREVIEW_ACTIVITY_NETWORK}-${PREVIEW_ACTIVI
 
 let activityNarrativePromise: Promise<ActivityNarrative> | null = null;
 
+function getSupportedWalletNetwork(network: WalletNetwork): Exclude<WalletNetwork, 'unsupported'> {
+  if (network === 'unsupported') {
+    throw new Error('Supported network is required before loading activity narratives.');
+  }
+
+  return network;
+}
+
+function getEffectiveWalletAddress(walletAddress: string | null, connectionVersion: number): string {
+  return walletAddress ?? `preview-wallet-${connectionVersion}`;
+}
+
+function isActiveDemoFlowSession(
+  session: DemoFlowSession | null,
+  {
+    isSessionReady,
+    connectionVersion,
+    network,
+    walletAddress,
+  }: {
+    isSessionReady: boolean;
+    connectionVersion: number;
+    network: WalletNetwork;
+    walletAddress: string | null;
+  },
+): session is DemoFlowSession {
+  return Boolean(
+    isSessionReady &&
+      session &&
+      session.connectionVersion === connectionVersion &&
+      session.network === network &&
+      session.walletAddress === getEffectiveWalletAddress(walletAddress, connectionVersion),
+  );
+}
+
 function getActivitySessionKey(session: DemoFlowSession): string {
-  return `${session.connectionVersion}:${session.network}:${session.payout.payoutId}`;
+  return `${session.connectionVersion}:${session.network}:${session.walletAddress}:${session.payout.payoutId}`;
 }
 
 function getClaimableTokenSymbol(tokenMint: string): string {
@@ -43,8 +82,9 @@ function buildSessionClaimablePayout(session: DemoFlowSession): ClaimablePayout 
   };
 }
 
-async function buildPreviewActivityNarrative(): Promise<ActivityNarrative> {
-  const payout = await demoUmbraService.createPrivatePayout({
+async function buildDemoPreviewActivityNarrative(): Promise<ActivityNarrative> {
+  const demoProvider = resolveDemoUmbraProvider();
+  const payout = await demoProvider.service.createPrivatePayout({
     recipient: PREVIEW_ACTIVITY_RECIPIENT,
     tokenMint: 'So11111111111111111111111111111111111111112',
     amount: '8',
@@ -52,16 +92,16 @@ async function buildPreviewActivityNarrative(): Promise<ActivityNarrative> {
   });
 
   const [claimablePayouts, claimResult, disclosureView] = await Promise.all([
-    demoUmbraService.scanClaimablePayouts({
+    demoProvider.service.scanClaimablePayouts({
       walletAddress: PREVIEW_ACTIVITY_WALLET_ADDRESS,
       network: PREVIEW_ACTIVITY_NETWORK,
     }),
-    demoUmbraService.claimPrivatePayout({
+    demoProvider.service.claimPrivatePayout({
       payoutId: payout.payoutId,
       walletAddress: PREVIEW_ACTIVITY_WALLET_ADDRESS,
       network: PREVIEW_ACTIVITY_NETWORK,
     }),
-    demoUmbraService.buildDisclosureView({
+    demoProvider.service.buildDisclosureView({
       payoutId: payout.payoutId,
       level: 'verification-ready',
       viewerRole: 'recipient',
@@ -73,22 +113,45 @@ async function buildPreviewActivityNarrative(): Promise<ActivityNarrative> {
     claimablePayouts,
     claimResult,
     disclosureView,
+    truthSource: 'prepared-preview',
   };
 }
 
 export function ActivityPageContainer() {
   const wallet = useWallet();
+  const demoProvider = resolveDemoUmbraProvider();
   const isActivitySessionReady = wallet.status === 'connected' && wallet.isSupportedNetwork;
   const activeDemoFlowSession = useMemo<DemoFlowSession | null>(
     () =>
-      isActivitySessionReady &&
-      wallet.demoFlowSession &&
-      wallet.demoFlowSession.connectionVersion === wallet.connectionVersion &&
-      wallet.demoFlowSession.network === wallet.network
+      isActiveDemoFlowSession(wallet.demoFlowSession, {
+        isSessionReady: isActivitySessionReady,
+        connectionVersion: wallet.connectionVersion,
+        network: wallet.network,
+        walletAddress: wallet.walletAddress,
+      })
         ? wallet.demoFlowSession
         : null,
-    [isActivitySessionReady, wallet.connectionVersion, wallet.demoFlowSession, wallet.network],
+    [
+      isActivitySessionReady,
+      wallet.connectionVersion,
+      wallet.demoFlowSession,
+      wallet.network,
+      wallet.walletAddress,
+    ],
   );
+  const readOnlyProvider = isActivitySessionReady
+    ? resolveReadOnlyUmbraProvider({
+        network: getSupportedWalletNetwork(wallet.network),
+        loadSdkModule: loadUmbraSdkModule,
+        walletAddress: wallet.walletAddress,
+        walletLabel: wallet.walletLabel,
+        signTransaction: wallet.signTransaction,
+        signAllTransactions: wallet.signAllTransactions,
+        signMessage: wallet.signMessage,
+        indexerApiEndpoint: process.env.NEXT_PUBLIC_UMBRA_INDEXER_API_ENDPOINT,
+        relayerApiEndpoint: process.env.NEXT_PUBLIC_UMBRA_RELAYER_API_ENDPOINT,
+      })
+    : null;
   const currentActivitySessionKey = activeDemoFlowSession ? getActivitySessionKey(activeDemoFlowSession) : null;
   const activeActivitySessionKeyRef = useRef<string | null>(currentActivitySessionKey);
 
@@ -110,37 +173,79 @@ export function ActivityPageContainer() {
     return session;
   }
 
-  const loadActivityNarrative: LoadActivityNarrative = useCallback(() => {
+  const loadActivityNarrative: LoadActivityNarrative | null = useCallback(() => {
     if (activeDemoFlowSession) {
       const activitySessionKey = getActivitySessionKey(activeDemoFlowSession);
       const session = getActiveDemoFlowSession(activeDemoFlowSession, activitySessionKey);
+      const sessionClaimablePayout = buildSessionClaimablePayout(session);
+      const claimablePayoutsPromise = readOnlyProvider?.capabilities.canScanClaimablePayouts
+        ? readOnlyProvider.service
+            .scanClaimablePayouts({
+              walletAddress: session.walletAddress,
+              network: session.network,
+            })
+            .then((claimablePayouts) => {
+              const activeSession = getActiveDemoFlowSession(activeDemoFlowSession, activitySessionKey);
+              const activeClaimablePayout = claimablePayouts.find(
+                (claimablePayout) => claimablePayout.payoutId === activeSession.payout.payoutId,
+              );
+              const canUseLiveNarrative = activeClaimablePayout
+                ? activeSession.claimResult
+                  ? activeClaimablePayout.claimStatus === 'claimed'
+                  : activeClaimablePayout.claimStatus === 'claimable'
+                : false;
 
-      return demoUmbraService
-        .buildDisclosureView({
-          payoutId: session.payout.payoutId,
-          level: session.draft.disclosureLevel,
-          viewerRole: 'recipient',
-        })
-        .then((disclosureView) => {
-          const activeSession = getActiveDemoFlowSession(activeDemoFlowSession, activitySessionKey);
+              return {
+                claimablePayouts: canUseLiveNarrative
+                  ? claimablePayouts
+                  : [buildSessionClaimablePayout(activeSession)],
+                truthSource: canUseLiveNarrative ? 'live-derived' : 'demo-derived',
+              } as const;
+            })
+        : Promise.resolve({
+            claimablePayouts: [sessionClaimablePayout],
+            truthSource: 'demo-derived' as const,
+          });
+      const disclosureViewPromise = readOnlyProvider?.capabilities.canBuildLiveDisclosure
+        ? readOnlyProvider.service.buildDisclosureView({
+            payoutId: session.payout.payoutId,
+            level: session.draft.disclosureLevel,
+            viewerRole: 'recipient',
+          })
+        : demoProvider.service.buildDisclosureView({
+            payoutId: session.payout.payoutId,
+            level: session.draft.disclosureLevel,
+            viewerRole: 'recipient',
+          });
 
-          return {
-            payout: activeSession.payout,
-            claimablePayouts: [buildSessionClaimablePayout(activeSession)],
-            claimResult: activeSession.claimResult,
-            disclosureView,
-          };
-        });
+      return Promise.all([
+        claimablePayoutsPromise,
+        disclosureViewPromise,
+      ]).then(([claimableNarrative, disclosureView]) => {
+        const activeSession = getActiveDemoFlowSession(activeDemoFlowSession, activitySessionKey);
+
+        return {
+          payout: activeSession.payout,
+          claimablePayouts: claimableNarrative.claimablePayouts,
+          claimResult: activeSession.claimResult,
+          disclosureView,
+          truthSource: claimableNarrative.truthSource,
+        };
+      });
+    }
+
+    if (readOnlyProvider) {
+      return Promise.reject(new Error('Activity narrative is not implemented for connected wallet sessions.'));
     }
 
     if (!activityNarrativePromise) {
-      activityNarrativePromise = buildPreviewActivityNarrative().finally(() => {
+      activityNarrativePromise = buildDemoPreviewActivityNarrative().finally(() => {
         activityNarrativePromise = null;
       });
     }
 
     return activityNarrativePromise;
-  }, [activeDemoFlowSession]);
+  }, [activeDemoFlowSession, demoProvider.service, readOnlyProvider]);
 
-  return <ActivityPage loadActivityNarrative={loadActivityNarrative} />;
+  return <ActivityPage loadActivityNarrative={readOnlyProvider && !activeDemoFlowSession ? null : loadActivityNarrative} />;
 }

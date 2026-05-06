@@ -31,6 +31,7 @@ const defaultActivityNarrative = {
     revealedFields: ['amount'],
     verificationArtifacts: ['network-confirmation', 'claim-window'],
   },
+  truthSource: 'prepared-preview' as const,
 } satisfies ActivityNarrative;
 
 describe('ActivityPage', () => {
@@ -54,14 +55,15 @@ describe('ActivityPage', () => {
     expect(screen.getByText('Claim window opened')).toBeInTheDocument();
     expect(screen.getByText('Recipient claim recorded')).toBeInTheDocument();
     expect(screen.getByText('Disclosure package ready')).toBeInTheDocument();
+    expect(screen.getByText('Prepared preview')).toBeInTheDocument();
     expect(
       screen.getByText(
-        'Follow one coherent wallet-scoped narrative across payout submission, claim progress, and bounded disclosure output. When no active demo session exists, this surface falls back to a prepared preview narrative instead of implying a fully live end-to-end replay.',
+        'Follow one coherent wallet-scoped narrative across payout submission, claim progress, and bounded disclosure output. Disconnected and unsupported wallet states can still use a prepared preview narrative, while connected supported sessions stay within truth-backed activity context.',
       ),
     ).toBeInTheDocument();
     expect(
       screen.getByText(
-        'This page links payout, claim, and disclosure outputs into one stable narrative and stays honest about the current preview fallback when a matching wallet session is unavailable.',
+        'This narrative is a prepared preview and is not backed by a connected wallet-scoped truth context.',
       ),
     ).toBeInTheDocument();
 
@@ -77,6 +79,7 @@ describe('ActivityPage', () => {
     ]);
 
     const narrativeSummary = screen.getByRole('region', { name: 'Narrative summary' });
+    expect(within(narrativeSummary).getByText('Narrative source: Prepared preview')).toBeInTheDocument();
     expect(within(narrativeSummary).getByText('Payout status: submitted')).toBeInTheDocument();
     expect(within(narrativeSummary).getByText('Claim status: claimed')).toBeInTheDocument();
     expect(within(narrativeSummary).getByText('Disclosure level: verification-ready')).toBeInTheDocument();
@@ -94,6 +97,50 @@ describe('ActivityPage', () => {
       '/app/payouts/new',
     );
     expect(within(nextAction).getByRole('link', { name: 'Return to landing' })).toHaveAttribute('href', '/');
+  });
+
+  it('shows a live-derived activity source when provided', async () => {
+    const loadActivityNarrative: LoadActivityNarrative = vi.fn().mockResolvedValue({
+      ...defaultActivityNarrative,
+      truthSource: 'live-derived',
+    });
+
+    render(<ActivityPage loadActivityNarrative={loadActivityNarrative} />);
+
+    expect(await screen.findByText('Recipient verification package')).toBeInTheDocument();
+    expect(screen.getByText('Live-derived')).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        'This narrative is derived from wallet-scoped provider truth and fills the remaining gaps with bounded app-level summaries.',
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it('shows a live-backed activity source when provided', async () => {
+    const loadActivityNarrative: LoadActivityNarrative = vi.fn().mockResolvedValue({
+      ...defaultActivityNarrative,
+      truthSource: 'live-backed',
+    });
+
+    render(<ActivityPage loadActivityNarrative={loadActivityNarrative} />);
+
+    expect(await screen.findByText('Recipient verification package')).toBeInTheDocument();
+    expect(screen.getByText('Live-backed')).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        'This narrative is backed directly by provider truth across payout, claim, and disclosure steps for the active wallet session.',
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it('shows an unavailable state when no truth-backed activity context is available', async () => {
+    render(<ActivityPage loadActivityNarrative={null} />);
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Activity narrative is currently unavailable.',
+    );
+    expect(screen.getByText('Unavailable')).toBeInTheDocument();
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
   });
 
   it('renders the claim window from the payout-matching claimable payout when the match is not first', async () => {

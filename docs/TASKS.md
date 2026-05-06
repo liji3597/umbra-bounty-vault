@@ -583,9 +583,18 @@
 - 错误路径不会直接崩溃或失去方向
 
 **当前收口备注:**
-- 浏览器人工验收已覆盖 Landing / Dashboard 与 create -> claim -> disclosure -> activity 主路径
-- Lighthouse / 可访问性问题已完成一轮修复与复验
-- 当前 Playwright golden-path 用例已按现状通过，但仍不能把自动化覆盖表述为完整的 failure-path / 全量 E2E 收口
+- 浏览器人工验收已覆盖 Landing / Dashboard 与 linked demo path 的 create -> claim -> disclosure -> activity 主路径；其中不应被表述为仓库已新增一套完整 live devnet receipts / screenshots 证据。
+- Lighthouse / 可访问性方向已完成一轮检查、修复与复验，但当前仓库仍没有 committed performance report / standalone a11y artifact。
+- 当前 Playwright 覆盖已从单一 golden-path 扩展到 5 个用例：1 条当前 gated preview / bounded narrative 主路径 + 4 条显式 failure-path（registration-required create gate、scan unavailable、claim unavailable、disclosure/activity unavailable）。
+- [x] 已补一个最小 failure-path Playwright 用例：connected supported wallet session 且无 truth-backed context 时，`/app/disclosure` 与 `/app/activity` 会显式显示 unavailable，而不是崩溃或伪装成可继续的 live narrative
+- [x] 为该用例补了仅开发态 query-param mock wallet bridge，避免在无浏览器钱包扩展的 Playwright 环境下无法进入 connected wallet session
+- [x] 已补 `Create Payout` 的最小 Playwright 验证：connected supported wallet session 且无 live create capability 时，review 态会显式展示 registration-required gate 文案，并禁用 final submit，而不是继续给出可提交错觉
+- [x] 上述 `Create Payout` registration-required / capability-gating 用例已通过 Playwright，相关 Create Payout 定向 Vitest（31 passed）也已通过
+- [x] 已补 `Claim Center` 的 scan unavailable Playwright 用例：connected supported wallet session 且无 scan capability 时，页面显式返回 unavailable，而非模糊错误或静默 fallback
+- [x] 已补 `Claim Center` 的 claim unavailable Playwright 用例：connected supported wallet session 已找到 prepared payout 但无 claim capability 时，页面显式返回 unavailable 并保留当前 claimable context
+- [x] 上述 claim failure-path 自动化已通过 Playwright，与 provider / container 层 claim truth 定向 Vitest 一致
+- [x] 已同步修正当前 `p7-5-golden-path` 的过期 Activity 文案断言，golden-path Playwright 已重新通过
+- [x] 2026-05-05 已重新补跑当前仓库验证：`pnpm typecheck` 通过、`pnpm test:run` 为 33 files / 254 tests 通过、`pnpm test:e2e` 为 5 specs 全部通过；`pnpm lint` 无 error，但仍保留 7 条测试文件 `useLayoutEffect` 依赖 warning，因此 P7 仍应维持“部分完成”口径
 
 ---
 
@@ -639,7 +648,7 @@
 **当前收口备注:**
 - 提交材料应明确采用浏览器已验证的 demo 顺序与页面口径
 - 所有素材需避免把当前实现表述成 production-complete protocol integration
-- 若引用自动化测试状态，应表述为：当前 linked demo session 的 Playwright golden-path 已通过，但 failure-path 自动化覆盖仍未完整
+- 若引用自动化测试状态，应表述为：当前 linked demo session 的 Playwright golden-path 与 4 条 bounded failure-path 已通过，但这仍不是完整 live devnet 证据包
 
 ---
 
@@ -1088,13 +1097,76 @@ P2 可以表述为：
 
 ---
 
-### 9.5 汇总结论
+### 9.5 SDK Refactor 执行进度（按 `docs/SDK_REFACTOR_PLAN.md`）
+
+- [x] `DisclosurePage` / `ActivityPage` 已显式标记 narrative truth source，区分 `prepared preview`、`demo-derived`、`live-derived` 边界，避免页面继续把 bounded narrative 渲染成无来源标签的“默认真相”。
+- [x] 上述 disclosure/activity truth-source labeling 小切片的定向测试与 typecheck 已通过。
+- [x] `ClaimCenterPageContainer` 已收口到 shared resolver truth，并移除 connected supported session 下的静默 demo scan/claim success。
+- [x] `DisclosurePageContainer` 已区分 preview、truth-backed request、以及 no truth-backed context，并在 connected supported session 且无真实上下文时显式 unavailable。
+- [x] `ActivityPageContainer` 已区分 disconnected/unsupported preview、active demo continuity、以及 connected supported session 下的 explicit unavailable。
+- [x] `DisclosurePageContainer` / `ActivityPageContainer` 的 demo continuity 激活条件已补齐 wallet-address 级 truth：wallet address 变更但 `connectionVersion` 未变时，不再继续消费旧 session。
+- [x] `DisclosurePageContainer` 在 active demo continuity 下已按 capability 优先消费 provider disclosure truth；仅在 live disclosure capability 缺失时回退到 continuity。
+- [x] 上述 disclosure truth-consumption 小切片的定向测试与 typecheck 已通过。
+- [x] `ActivityPageContainer` 在 active demo continuity 下已优先消费 provider scan truth 的 `claimablePayouts`；仅在 scan capability 缺失或 scan 结果不含 active payout 时回退到 continuity。
+- [x] `sdk-live` 的 bounded disclosure capability 已收口到 wallet-scoped scan truth：仅在 provider 具备 scan truth 时暴露 `canBuildLiveDisclosure`，并在请求 payout 不属于当前 wallet-scoped scan 结果时显式拒绝 disclosure build，避免把“有能力”误渲染成“该 payout 已被 truth 验证”。
+- [x] `ActivityPageContainer` 已将 live narrative 采纳条件收紧到与当前 session claim story 一致：pending session 仅接受 provider `claimable` 状态，已有 claimResult 时仅接受 provider `claimed` 状态，避免 `truthSource` / claim timeline / claim window summary 自相矛盾。
+- [x] 上述 sdk disclosure capability + activity narrative consistency 小切片的定向测试（79 passed）与 typecheck 已通过。
+- [x] `ClaimCenterPage` 已将 claim success 后的 downstream `Disclosure` / `Activity` 入口收口到 continuity-backed context：无 linked demo continuity 时不再把用户引去当前 explicit unavailable 页面。
+- [x] `DashboardPageOverview` 已将 connected supported session 且无 linked payout session 的 `Disclosure` 入口改为非链接提示，避免 dashboard 在无 truth-backed context 时继续 overpromise disclosure availability。
+- [x] 上述 claim/dashboard truth-boundary honesty 小切片的定向测试（40 passed）与 typecheck 已通过。
+- [x] `DashboardPageOverview` 已将 workflow path 中的 `Disclosure` / `Activity` 入口收口到 wallet truth：无 linked payout session 时不再开放 Disclosure，未完成 linked claim 时不再开放 Activity，避免 dashboard 主流程继续把用户引去当前 explicit unavailable 页面。
+- [x] 上述 dashboard workflow-path truth-boundary 小切片的定向测试（30 passed）与 typecheck 已通过。
+- [x] `CreatePayoutPageContainer` 已完成 capability boundary 收口：connected supported session 若无真实 create capability，不再静默 fallback 到 demo submit。
+- [x] `CreatePayoutPage` 已支持 `submitCreatePayout = null`，并在 capability 缺失时显式禁用 final submit。
+- [x] `CreatePayoutPageContainer` 已把 connected supported session 的 create truth 切到 SDK resolver；legacy transfer 不再作为默认 live create provider。
+- [x] `CreatePayoutPage` review 态已显式展示 registration / SDK gate 文案，避免 transfer / demo success 冒充 live create。
+- [x] 上述 page-level truth boundary 相关定向测试与 typecheck 已通过。
+- [x] `Phase 2.2 — Live Create`
+  - [x] 防止 `sdk-live` create success 继续写入 demo continuity，避免后续 Claim / Disclosure / Activity 误把 live result 当作 demo session 消费
+  - [x] 接入真实 recipient registration 检测抽象，并让 `sdk-live` provider 具备 query-backed registration resolver 接口
+  - [x] 在 `CreatePayoutPage` review 态接入异步 registration gate 结果，并区分默认 unavailable vs recipient unregistered 文案
+  - [x] 将 resolver 真正接到官方 `@umbra-privacy/sdk` 的 `getUserAccountQuerierFunction` 与 signer/client 构建链路
+  - [x] 在 `sdk-live` provider 下基于官方 `EncryptedUserAccount` 字段细化 recipient ready 判定，并把 `x25519 / commitment / anonymous usage` 未就绪原因透传到 create review gate
+  - [x] 将“recipient 已注册且 create 仍未接通”与“recipient 未注册”两类状态继续贯穿到后续 live create adapter
+  - [x] 为 `sdk-live` provider 补齐 injected create gateway 的最小 capability boundary，并在 create available 时清除 review 态的错误 `not wired` 提示
+  - [x] 接通 official SDK create execution：通过 Wallet Standard signer bridge 将 wallet-adapter 签名能力接到官方 create path，并补齐针对性测试覆盖
+  - [x] 在 wallet bridge / wallet session 层补齐 auto reconnect 与切账号后的 session invalidation，避免旧 demo continuity 穿透到新钱包会话
+- [x] `Phase 2.3 — Live Scan`
+  - [x] 将 `scanClaimablePayouts` 接到 official SDK scanner，并在 `sdk-live` provider 中暴露真实 scan capability
+  - [x] `ClaimCenterPageContainer` 在 connected supported session 下优先消费 shared resolver truth；有 demo continuity 时继续保留 session 优先级
+  - [x] 当 live scan 基础设施未配置或当前 provider 无 scan capability 时，Claim Center 显式返回 unavailable，而不再退回泛化 `not implemented` / 模糊默认错误
+  - [x] `ClaimCenterPage` 已将 scanner unavailable 映射为明确用户态文案，并补齐 Claim Center / provider 层定向测试与 typecheck
+  - [x] live scan capability truth 已与 signer 前置条件对齐：缺少 `signTransaction` / `signMessage` 时不再提前暴露 `canScanClaimablePayouts`
+
+- [x] `Phase 2.4 — Live Claim`
+  - [x] `ClaimCenterPageContainer` 在 connected supported session 且无 demo continuity 时，对 claim capability 缺失显式返回 unavailable，而不再透传泛化 `claimPrivatePayout is not implemented`
+  - [x] `umbraSdkClient` / `umbraSdkProvider` 已补齐 claim unavailable 常量与 `canClaimPrivatePayout` capability truth，保持 provider truth model 与 scan/create 对齐
+  - [x] `ClaimCenterPage` 已将 claim unavailable 映射为明确用户态文案，并补齐 Claim Center / provider / wallet session 定向测试与 typecheck
+  - [x] demo continuity 已补齐 wallet-address 级 session identity，并保留 pending / claimed 的 claim status 语义，避免地址切换复用旧 session 或把 pending 误报为 claimed
+  - [x] `umbraSdkClient` 已补齐基于 official SDK 的最小 live claim gateway：claim 时即时重扫当前 wallet session 的 claimable UTXO，按 synthetic `payoutId` 匹配目标，并在 signer / indexer / relayer / merkle-proof 依赖齐备时返回真实 `transactionHash` + `pending` 结果
+  - [x] receiver-claim 路径的 scan / claim 集合已对齐 official SDK quickstart：Claim Center 仅暴露并匹配 scanner 的 `received` UTXO，避免把 `publicReceived` 误展示为可 claim
+  - [x] Wallet Standard signer 的 `account.chains` 已与 `config.network` 对齐，避免在 mainnet live signer session 中继续写死 `solana:devnet`
+- [x] `resolveReadOnlyUmbraProvider` 已补最小协议层自动化证据：注入 `scanClaimablePayouts` 时会暴露 `canScanClaimablePayouts: true`，并按当前 provider truth 同步带出 `canBuildLiveDisclosure: true`；注入 `claimPrivatePayout` 时会暴露 `canClaimPrivatePayout: true`，避免 read-only resolver 的 capability matrix 再次漂移。
+- [x] 上述 read-only resolver capability truth 的定向 Vitest（`umbraProviderResolver.test.ts` + `umbraSdkProvider.test.ts`，27 passed）已通过，进一步补齐 `Phase 5` 中 provider resolver / live scan / live claim 的自动化验证证据。
+- [x] 已把 `Phase 5` 的最小手动 devnet smoke checklist 结果整理进 `docs/P7_VALIDATION_EVIDENCE.md`：把 wallet connect / registration gate / create / scan / claim / activity / disclosure 七步与仓库内现有证据逐项对齐，避免“只有散落文案，没有成型收口记录”。
+- [x] 上述 smoke checklist 采用 reviewer-safe 口径：明确它是基于现有浏览器人工主路径与自动化 truth-boundary 证据的 closeout artifact，而不是伪装成已提交 live devnet transaction receipts / screenshot pack 的过度声明。
+- [x] 轻量审查已补跑；review agent 仍受 worktree 与本地未提交改动不同步影响，因此本轮以本地文件状态与通过的定向测试结果作为收口依据。
+- [x] `Phase 4 — 文档与提交口径重写`
+  - [x] README / `docs/PLATFORM_SUBMISSION.md` / `docs/SUBMISSION.md` / `docs/DEMO_SCRIPT.md` 已与当前 SDK-backed create -> scan -> claim 边界对齐，不再把仓库表述成“只有 Create live anchor”。
+  - [x] Disclosure / Activity 口径已统一收口为 bounded wallet-scoped summary，不再误写成完整 live disclosure backend / audit artifact。
+  - [x] `docs/ARCHITECTURE_DIAGRAM.md` / `docs/SPEC.md` 已继续收口到当前 truth model：claim flow 不再以 demo continuity 作为主表述，架构图也不再把集成边界描述成 preview/demo-only。
+- [x] `Phase 5 — 验证与交付闭环`
+  - [x] 2026-05-05 已重新跑通当前自动化验证：`pnpm typecheck`、`pnpm test:run`（33 files / 254 tests）、`pnpm test:e2e`（5 specs）全部通过
+  - [x] `pnpm lint` 已收敛到 `0 errors / 7 warnings`，剩余均为 3 个 container test 文件中的 `useLayoutEffect` 依赖 warning，不构成当前 Phase 5 阻塞，但仓库仍不应表述为 lint-clean
+  - [x] 为通过当前验证补做了最小兼容修复：`WalletProvider.tsx` 将 demo continuity 清理从 effect 内同步 setState 改为派生可见值，避免 React `set-state-in-effect` lint error
+  - [x] 为通过当前验证补做了测试环境兼容修复：`SolanaWalletBridgeProvider.tsx` 对 `useSearchParams()` 的空值场景做安全降级，避免 `app layout` Vitest 因 mock wallet bridge 查询参数读取而崩溃
+  - [x] `docs/P7_VALIDATION_EVIDENCE.md` 已更新为当前仓库状态：5 条 Playwright 证据、254 条 Vitest 通过、以及 reviewer-safe 的 bounded evidence 口径
 
 - **P1：部分被后续实现反向满足，但正式设计资产仍需补齐，因此不算 fully done。**
 - **P2：基础设施与 typed boundary 已大体完成，可作为后续功能与 demo 的稳定底座。**
 - **P6：活动流、状态串联与叙事闭环已经完成，可作为对外 demo 主线。**
-- **P7：已完成浏览器端 responsive / a11y 主路径验收，并修复至少一项真实可访问性问题；当前 Playwright golden-path 主路径已通过，但 failure-path 自动化覆盖仍需继续补齐。**
-- **P8：提交文案与演示口径应以“已验证的 linked demo session + 保守范围声明”作为统一表述。**
+- **P7：当前已跑通 typecheck、Vitest 与 5 条 Playwright；lint 仅剩测试文件 warnings，且响应式 / a11y / performance / live-devnet artifact 证据仍不完整，因此仍应维持“部分完成”。**
+- **P8：提交文案与演示口径应以“SDK-backed create -> scan -> claim + bounded disclosure/activity summary + 保守范围声明”作为统一表述。**
 - 后续若继续补文档、原型与 submission，应统一采用以下口径：
   - 这是一个 **privacy-first reward workflow**
   - 不是 generic wallet

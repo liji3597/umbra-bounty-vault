@@ -14,6 +14,9 @@ interface MockBridgeState {
   connectionIdentity: string | null;
   connectionVersion: number;
   disconnect: ReturnType<typeof vi.fn>;
+  signTransaction: null;
+  signAllTransactions: null;
+  signMessage: null;
   submitTransaction: null;
   walletAddress: string | null;
   walletState: WalletProviderState;
@@ -25,6 +28,9 @@ const mockBridgeState: MockBridgeState = {
   connectionIdentity: null,
   connectionVersion: 0,
   disconnect: vi.fn(),
+  signTransaction: null,
+  signAllTransactions: null,
+  signMessage: null,
   submitTransaction: null,
   walletAddress: null,
   walletState: {
@@ -42,6 +48,9 @@ vi.mock('./SolanaWalletBridgeProvider', () => ({
     connectionIdentity: mockBridgeState.connectionIdentity,
     connectionVersion: mockBridgeState.connectionVersion,
     disconnect: mockBridgeState.disconnect,
+    signTransaction: mockBridgeState.signTransaction,
+    signAllTransactions: mockBridgeState.signAllTransactions,
+    signMessage: mockBridgeState.signMessage,
     submitTransaction: mockBridgeState.submitTransaction,
     walletAddress: mockBridgeState.walletAddress,
     walletState: mockBridgeState.walletState,
@@ -94,17 +103,19 @@ function DemoFlowSessionView() {
   return <span>{wallet.demoFlowSession?.payout.payoutId ?? 'no-session'}</span>;
 }
 
-function DemoFlowSessionWriter({
-  session,
-  onWrite,
-}: {
+interface DemoFlowSessionWriterProps {
   session: {
     connectionVersion: number;
     network: 'devnet' | 'mainnet';
     payout: CreatePrivatePayoutResult;
   };
   onWrite: () => void;
-}) {
+}
+
+function DemoFlowSessionWriter({
+  session,
+  onWrite,
+}: DemoFlowSessionWriterProps) {
   const wallet = useWallet();
 
   return (
@@ -133,6 +144,8 @@ describe('WalletProvider', () => {
     mockBridgeState.connectionIdentity = null;
     mockBridgeState.connectionVersion = 0;
     mockBridgeState.submitTransaction = null;
+    mockBridgeState.signTransaction = null;
+    mockBridgeState.signAllTransactions = null;
     mockBridgeState.walletAddress = null;
     mockBridgeState.walletState = {
       status: 'disconnected',
@@ -278,6 +291,102 @@ describe('WalletProvider', () => {
     });
   });
 
+  it('clears demo flow continuity when the bridged wallet session version changes after auto reconnect', async () => {
+    mockBridgeState.connectionIdentity = 'Phantom:wallet-1';
+    mockBridgeState.connectionVersion = 1;
+    mockBridgeState.walletAddress = 'wallet-1';
+    mockBridgeState.walletState = {
+      status: 'connected',
+      network: 'devnet',
+      walletLabel: 'wallet-1',
+      message: null,
+    };
+
+    const { rerender } = render(
+      <WalletProvider>
+        <DemoFlowSessionWriter
+          session={{ connectionVersion: 1, network: 'devnet', payout: SESSION_RESULT }}
+          onWrite={vi.fn()}
+        />
+        <DemoFlowSessionView />
+      </WalletProvider>,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Write session' }));
+
+    await waitFor(() => {
+      expect(screen.getByText('session-payout')).toBeInTheDocument();
+    });
+
+    mockBridgeState.connectionIdentity = 'Phantom:wallet-2';
+    mockBridgeState.connectionVersion = 2;
+    mockBridgeState.walletAddress = 'wallet-2';
+    mockBridgeState.walletState = {
+      status: 'connected',
+      network: 'devnet',
+      walletLabel: 'wallet-2',
+      message: null,
+    };
+
+    rerender(
+      <WalletProvider>
+        <DemoFlowSessionView />
+      </WalletProvider>,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('no-session')).toBeInTheDocument();
+    });
+  });
+
+  it('clears demo flow continuity when the bridged wallet address changes without a version bump', async () => {
+    mockBridgeState.connectionIdentity = 'Phantom:wallet-1';
+    mockBridgeState.connectionVersion = 1;
+    mockBridgeState.walletAddress = 'wallet-1';
+    mockBridgeState.walletState = {
+      status: 'connected',
+      network: 'devnet',
+      walletLabel: 'wallet-1',
+      message: null,
+    };
+
+    const { rerender } = render(
+      <WalletProvider>
+        <DemoFlowSessionWriter
+          session={{ connectionVersion: 1, network: 'devnet', payout: SESSION_RESULT }}
+          onWrite={vi.fn()}
+        />
+        <DemoFlowSessionView />
+      </WalletProvider>,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Write session' }));
+
+    await waitFor(() => {
+      expect(screen.getByText('session-payout')).toBeInTheDocument();
+    });
+
+    mockBridgeState.connectionIdentity = 'Phantom:wallet-2';
+    mockBridgeState.connectionVersion = 1;
+    mockBridgeState.walletAddress = 'wallet-2';
+    mockBridgeState.walletState = {
+      status: 'connected',
+      network: 'devnet',
+      walletLabel: 'wallet-2',
+      message: null,
+    };
+
+    rerender(
+      <WalletProvider>
+        <DemoFlowSessionView />
+      </WalletProvider>,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('no-session')).toBeInTheDocument();
+    });
+  });
+
   it('ignores a stale demo flow session write after the bridged wallet session changes', async () => {
     const onWrite = vi.fn();
 
@@ -333,6 +442,6 @@ describe('WalletProvider', () => {
       expect(onWrite).toHaveBeenCalledTimes(2);
     });
     expect(screen.queryByText('stale-session-payout')).not.toBeInTheDocument();
-    expect(screen.getByText('session-payout')).toBeInTheDocument();
+    expect(screen.getByText('no-session')).toBeInTheDocument();
   });
 });

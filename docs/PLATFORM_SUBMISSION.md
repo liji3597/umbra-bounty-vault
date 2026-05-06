@@ -15,8 +15,8 @@ Umbra Bounty Vault is a privacy-first reward workflow for bounties, grants, and 
 | --- | --- |
 | Product shape | A user-facing workflow for private payout creation, recipient claim, controlled disclosure, and lifecycle review |
 | Sponsor fit | Umbra is used as privacy infrastructure for reward distribution, not as a generic transfer demo |
-| Current live anchor | `Create Payout` can submit a real devnet SOL transfer through the injected wallet authority |
-| Current boundary | `Claim Center`, `Disclosure`, and `Activity` still rely on wallet-scoped typed demo continuity |
+| Current live anchor | SDK-backed create -> scan -> claim flows are wired for supported wallet sessions |
+| Current boundary | `Disclosure` and `Activity` are bounded wallet-scoped summaries, not full protocol disclosure/audit artifacts |
 | Validation posture | Current evidence supports a bounded demo submission, not a full audit-complete delivery |
 
 ## Project Overview
@@ -54,7 +54,7 @@ Umbra is used here as the privacy-oriented foundation for:
 - Claim Center flow for recipient discovery and linked claim states
 - Disclosure / Verification view for controlled disclosure
 - Activity narrative view for lifecycle closure
-- real wallet adapter entry with wallet-scoped demo-session continuity
+- real wallet adapter entry with wallet-scoped session continuity
 
 ## Tech Stack
 - Next.js App Router
@@ -68,27 +68,27 @@ Umbra is used here as the privacy-oriented foundation for:
 - pnpm
 
 ## Current Scope Note
-This repository currently demonstrates the workflow through a linked demo session with a real wallet adapter entry.
+This repository currently demonstrates the workflow through a wallet-scoped session with a real wallet adapter entry and an Umbra SDK-centered typed service boundary.
 
 The current implementation includes:
-- a real wallet adapter entry with wallet-scoped demo-session continuity
-- a typed demo Umbra service boundary
-- a live devnet anchor in `Create Payout`
-- linked disclosure and activity surfaces for lifecycle explanation
+- a real wallet adapter entry with wallet-scoped session identity
+- SDK-backed `createPrivatePayout`
+- SDK-backed `scanClaimablePayouts` and `claimPrivatePayout` when signer/indexer/relayer dependencies are available
+- bounded disclosure and activity surfaces derived from wallet-scoped provider truth
 - browser-manual validation of the main demo path
 - one focused Playwright golden-path spec for the linked demo path
 
 Current implementation boundary:
-- real devnet support is anchored in `Create Payout`
-- the live devnet gateway currently supports `createPrivatePayout` only
-- `Claim Center`, `Disclosure`, and `Activity` rely on wallet-scoped typed demo continuity or prepared states rather than a full live backend or indexer stack
-- the current live path supports direct SOL transfer semantics with optional memo and `disclosureLevel: 'none'`
+- create / scan / claim are wired around official Umbra SDK flows, but remain bounded to a devnet-first, single-asset, happy-path-oriented scope
+- `Disclosure` and `Activity` remain app-level wallet-scoped summaries rather than a full live disclosure backend or replayable audit log
+- when no matching wallet-scoped truth context exists, those surfaces fall back to preview or explicit unavailable states instead of fabricating live success
+- the project should not be described as a production-complete live treasury environment
 
 It should not be described as:
 - a finished production treasury system
-- a full live Umbra protocol integration
-- a fully implemented end-to-end devnet claim/disclosure/activity flow
-- protocol behavior proven beyond the current demo boundary
+- a full live Umbra deployment across every workflow surface and backend dependency
+- a fully implemented disclosure/audit backend
+- protocol behavior proven beyond the current bounded devnet-first workflow
 - exhaustive automated E2E coverage across failure paths or future workflow extensions
 
 ## Validation Evidence Note
@@ -106,7 +106,7 @@ Evidence still missing as committed artifacts:
 - a committed Lighthouse or key-page performance report
 
 Reviewer-safe framing:
-- the project is submission-ready as a demo workflow with a minimal live devnet anchor
+- the project is submission-ready as a bounded demo workflow with SDK-backed create -> scan -> claim capabilities
 - the current validation evidence is targeted and honest, not exhaustive across every failure path or quality dimension
 
 ## Demo Flow

@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useState, type ChangeEvent, type FormEvent } from 'react';
+import { useRef, useState, type ChangeEvent, type FormEvent } from 'react';
 
 import { Badge, Panel } from '@/components/ui';
 import { PayoutSubmissionError } from '@/features/protocol/payoutSubmission';
@@ -22,7 +22,9 @@ export type SubmitCreatePayout = (
 ) => Promise<CreatePrivatePayoutResult>;
 
 interface CreatePayoutPageProps {
-  submitCreatePayout?: SubmitCreatePayout;
+  submitCreatePayout?: SubmitCreatePayout | null;
+  submitUnavailableMessage?: string;
+  onReviewValuesChange?: (values: CreatePayoutFormValues) => Promise<string | undefined>;
   onSubmitSuccess?: (result: CreatePrivatePayoutResult, values: CreatePayoutFormValues) => void;
 }
 
@@ -42,6 +44,8 @@ const SIGNING_SUBMIT_ERROR_MESSAGE =
 const NETWORK_SUBMIT_ERROR_MESSAGE =
   'Network request failed while submitting the payout. Retry on a supported connection.';
 const SUBMIT_PAYOUT_ERROR_MESSAGE = 'Unable to submit payout.';
+const CREATE_PAYOUT_UNAVAILABLE_MESSAGE =
+  'Private payout submission is currently unavailable for this wallet session.';
 
 type DraftField = keyof CreatePayoutDraft;
 type DraftFieldErrors = Partial<Record<DraftField, string>>;
@@ -143,6 +147,8 @@ async function previewSubmitCreatePayout(): Promise<CreatePrivatePayoutResult> {
 
 export function CreatePayoutPage({
   submitCreatePayout = previewSubmitCreatePayout,
+  submitUnavailableMessage,
+  onReviewValuesChange,
   onSubmitSuccess,
 }: CreatePayoutPageProps) {
   const wallet = useWallet();
@@ -152,8 +158,14 @@ export function CreatePayoutPage({
   const [reviewValues, setReviewValues] = useState<CreatePayoutFormValues | null>(null);
   const [submitResult, setSubmitResult] = useState<CreatePrivatePayoutResult | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [reviewUnavailableMessage, setReviewUnavailableMessage] = useState<string | undefined>(
+    submitUnavailableMessage,
+  );
+  const reviewRequestIdRef = useRef(0);
 
   const isWalletReady = wallet.status === 'connected' && wallet.isSupportedNetwork;
+  const isSubmitAvailable = Boolean(submitCreatePayout);
+  const effectiveSubmitUnavailableMessage = reviewUnavailableMessage ?? submitUnavailableMessage;
   const walletMessage = isWalletReady
     ? `${wallet.walletLabel ?? 'Wallet'} ready on ${wallet.networkLabel}.`
     : 'Connect a supported wallet before reviewing or submitting a payout.';
@@ -167,6 +179,7 @@ export function CreatePayoutPage({
       ...currentErrors,
       [field]: undefined,
     }));
+    setReviewUnavailableMessage(submitUnavailableMessage);
 
     if (phase !== 'editing') {
       setPhase('editing');
@@ -175,7 +188,7 @@ export function CreatePayoutPage({
     }
   }
 
-  function handleReview(event: FormEvent<HTMLFormElement>) {
+  async function handleReview(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
     const parsedValues = createPayoutFormSchema.safeParse(buildCreatePayoutInput(draft));
@@ -187,15 +200,34 @@ export function CreatePayoutPage({
       return;
     }
 
+    const reviewRequestId = reviewRequestIdRef.current + 1;
+    reviewRequestIdRef.current = reviewRequestId;
+    const nextReviewUnavailableMessage = onReviewValuesChange
+      ? await onReviewValuesChange(parsedValues.data)
+      : submitUnavailableMessage;
+
+    if (reviewRequestIdRef.current !== reviewRequestId) {
+      return;
+    }
+
     setFieldErrors({});
     setReviewValues(parsedValues.data);
+    setReviewUnavailableMessage(nextReviewUnavailableMessage);
     setSubmitError(null);
     setSubmitResult(null);
     setPhase('review');
   }
 
+
   async function handleSubmit() {
     if (!reviewValues || !isWalletReady) {
+      return;
+    }
+
+    if (!submitCreatePayout) {
+      setSubmitResult(null);
+      setSubmitError(effectiveSubmitUnavailableMessage ?? CREATE_PAYOUT_UNAVAILABLE_MESSAGE);
+      setPhase('failure');
       return;
     }
 
@@ -235,6 +267,7 @@ export function CreatePayoutPage({
     setReviewValues(null);
     setSubmitResult(null);
     setSubmitError(null);
+    setReviewUnavailableMessage(submitUnavailableMessage);
     setPhase('editing');
   }
 
@@ -322,11 +355,16 @@ export function CreatePayoutPage({
                   className="payout-page__button"
                   type="button"
                   onClick={handleSubmit}
-                  disabled={!isWalletReady}
+                  disabled={!isWalletReady || !isSubmitAvailable}
                 >
                   Create payout
                 </button>
               </div>
+              {!isSubmitAvailable && isWalletReady ? (
+                <p className="payout-feedback__copy" role="alert">
+                  {effectiveSubmitUnavailableMessage ?? CREATE_PAYOUT_UNAVAILABLE_MESSAGE}
+                </p>
+              ) : null}
             </div>
           ) : null}
 
@@ -432,7 +470,7 @@ export function CreatePayoutPage({
                   className="payout-page__button"
                   type="button"
                   onClick={handleSubmit}
-                  disabled={!isWalletReady}
+                  disabled={!isWalletReady || !isSubmitAvailable}
                 >
                   Try again
                 </button>
@@ -441,7 +479,7 @@ export function CreatePayoutPage({
           ) : null}
 
           {phase === 'editing' ? (
-            <form className="payout-form" onSubmit={handleReview} noValidate>
+            <form className="payout-form" onSubmit={(event) => void handleReview(event)} noValidate>
               <section className="payout-page__section">
                 <div className="payout-page__section-heading">
                   <h2 className="payout-page__section-title">Resolution target</h2>

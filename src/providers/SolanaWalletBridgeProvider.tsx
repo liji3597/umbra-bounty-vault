@@ -6,6 +6,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from 'react';
@@ -23,17 +24,15 @@ import {
   useWalletModal,
 } from '@solana/wallet-adapter-react-ui';
 import '@solana/wallet-adapter-react-ui/styles.css';
-import {
-  PhantomWalletAdapter,
-} from '@solana/wallet-adapter-phantom';
-import {
-  SolflareWalletAdapter,
-} from '@solana/wallet-adapter-solflare';
+import { PhantomWalletAdapter } from '@solana/wallet-adapter-phantom';
+import { SolflareWalletAdapter } from '@solana/wallet-adapter-solflare';
 import type {
   Connection,
   Transaction,
+  VersionedTransaction,
 } from '@solana/web3.js';
 import { clusterApiUrl } from '@solana/web3.js';
+import { useSearchParams } from 'next/navigation';
 
 import type { SupportedWalletNetwork } from '@/features/shared/network';
 
@@ -44,6 +43,9 @@ interface SolanaWalletBridgeValue {
   connectionIdentity: string | null;
   connectionVersion: number;
   submitTransaction: ((transaction: Transaction, minContextSlot: number) => Promise<string>) | null;
+  signTransaction: ((transaction: Transaction | VersionedTransaction) => Promise<Transaction | VersionedTransaction>) | null;
+  signAllTransactions: ((transactions: readonly (Transaction | VersionedTransaction)[]) => Promise<(Transaction | VersionedTransaction)[]>) | null;
+  signMessage: ((message: Uint8Array) => Promise<Uint8Array>) | null;
   walletAddress: string | null;
   walletState: WalletProviderState;
   connect: () => void;
@@ -60,6 +62,12 @@ interface SolanaWalletBridgeStateProviderProps extends SolanaWalletBridgeProvide
   connectionVersion: number;
   message: string | null;
   setMessage: (message: string | null) => void;
+}
+
+interface MockWalletBridgeState {
+  connected: boolean;
+  walletAddress: string;
+  walletLabel: string;
 }
 
 const SOLANA_NETWORK: SupportedWalletNetwork = 'devnet';
@@ -87,6 +95,25 @@ function buildWalletState(
   };
 }
 
+function isDevelopmentWalletBridgeEnabled(): boolean {
+  return process.env.NODE_ENV !== 'production';
+}
+
+function useMockWalletBridgeState(): MockWalletBridgeState | null {
+  const searchParams = useSearchParams();
+  const walletMode = searchParams?.get('mockWallet');
+
+  if (!isDevelopmentWalletBridgeEnabled() || walletMode !== 'connected') {
+    return null;
+  }
+
+  return {
+    connected: true,
+    walletAddress: searchParams?.get('mockWalletAddress') ?? 'mock-wallet-e2e',
+    walletLabel: searchParams?.get('mockWalletLabel') ?? 'Mock wallet preview',
+  };
+}
+
 function SolanaWalletBridgeStateProvider({
   children,
   bumpConnectionVersion,
@@ -105,16 +132,25 @@ function SolanaWalletBridgeStateProvider({
     disconnecting,
     publicKey,
     sendTransaction,
+    signMessage,
+    signTransaction,
+    signAllTransactions,
     wallet,
   } = useSolanaWallet();
+  const mockWalletBridgeState = useMockWalletBridgeState();
 
   useEffect(() => {
-    if (connected) {
+    if (connected || mockWalletBridgeState?.connected) {
       clearMessage();
     }
-  }, [clearMessage, connected]);
+  }, [clearMessage, connected, mockWalletBridgeState?.connected]);
 
   const handleConnect = useCallback(() => {
+    if (mockWalletBridgeState) {
+      clearMessage();
+      return;
+    }
+
     clearMessage();
 
     if (!wallet) {
@@ -122,33 +158,47 @@ function SolanaWalletBridgeStateProvider({
       return;
     }
 
-    void connect()
-      .then(() => {
-        bumpConnectionVersion();
-      })
-      .catch((error: unknown) => {
-        setMessage(getWalletErrorMessage(error));
-      });
-  }, [bumpConnectionVersion, clearMessage, connect, setMessage, setVisible, wallet]);
+    void connect().catch((error: unknown) => {
+      setMessage(getWalletErrorMessage(error));
+    });
+  }, [clearMessage, connect, mockWalletBridgeState, setMessage, setVisible, wallet]);
 
   const handleDisconnect = useCallback(() => {
+    if (mockWalletBridgeState) {
+      clearMessage();
+      return;
+    }
+
     clearMessage();
 
-    void disconnect()
-      .then(() => {
-        bumpConnectionVersion();
-      })
-      .catch((error: unknown) => {
-        setMessage(getWalletErrorMessage(error));
-      });
-  }, [bumpConnectionVersion, clearMessage, disconnect, setMessage]);
+    void disconnect().catch((error: unknown) => {
+      setMessage(getWalletErrorMessage(error));
+    });
+  }, [clearMessage, disconnect, mockWalletBridgeState, setMessage]);
 
-  const walletAddress = publicKey?.toBase58() ?? null;
-  const walletLabel = connected
-    ? walletAddress ?? wallet?.adapter.name ?? null
-    : wallet?.adapter.name ?? null;
+  const walletAddress = mockWalletBridgeState?.walletAddress ?? publicKey?.toBase58() ?? null;
+  const walletLabel = mockWalletBridgeState
+    ? mockWalletBridgeState.walletLabel
+    : connected
+      ? walletAddress ?? wallet?.adapter.name ?? null
+      : wallet?.adapter.name ?? null;
+  const connectionIdentity = walletAddress ? `${wallet?.adapter.name ?? 'wallet'}:${walletAddress}` : null;
+  const previousConnectionIdentityRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (previousConnectionIdentityRef.current === connectionIdentity) {
+      return;
+    }
+
+    if (previousConnectionIdentityRef.current !== null || connectionIdentity !== null) {
+      bumpConnectionVersion();
+    }
+
+    previousConnectionIdentityRef.current = connectionIdentity;
+  }, [bumpConnectionVersion, connectionIdentity]);
+
   const walletState = useMemo<WalletProviderState>(() => {
-    if (connected) {
+    if (mockWalletBridgeState?.connected || connected) {
       return buildWalletState('connected', walletLabel, null);
     }
 
@@ -161,8 +211,8 @@ function SolanaWalletBridgeStateProvider({
     }
 
     return buildWalletState('disconnected', null, null);
-  }, [connected, connecting, disconnecting, message, walletLabel]);
-  const connectionIdentity = connected && walletAddress ? `${wallet?.adapter.name ?? 'wallet'}:${walletAddress}` : null;
+  }, [connected, connecting, disconnecting, message, mockWalletBridgeState?.connected, walletLabel]);
+
   const submitTransaction = useCallback(
     async (transaction: Transaction, minContextSlot: number) => {
       if (!publicKey) {
@@ -173,24 +223,42 @@ function SolanaWalletBridgeStateProvider({
     },
     [connection, publicKey, sendTransaction],
   );
+
+  const bridgeSignAllTransactions = useCallback(
+    async (transactions: readonly (Transaction | VersionedTransaction)[]) => {
+      if (!signAllTransactions) {
+        throw new Error('Wallet cannot sign multiple transactions.');
+      }
+
+      return signAllTransactions([...transactions]);
+    },
+    [signAllTransactions],
+  );
+
   const contextValue = useMemo<SolanaWalletBridgeValue>(
     () => ({
       connection: connected && walletAddress ? connection : null,
       connectionIdentity,
       connectionVersion,
       submitTransaction: connected && walletAddress ? submitTransaction : null,
+      signTransaction: connected && walletAddress ? signTransaction ?? null : null,
+      signAllTransactions: connected && walletAddress ? bridgeSignAllTransactions : null,
+      signMessage: connected && walletAddress ? signMessage ?? null : null,
       walletAddress,
       walletState,
       connect: handleConnect,
       disconnect: handleDisconnect,
     }),
     [
+      bridgeSignAllTransactions,
       connected,
       connection,
       connectionIdentity,
       connectionVersion,
       handleConnect,
       handleDisconnect,
+      signMessage,
+      signTransaction,
       submitTransaction,
       walletAddress,
       walletState,
